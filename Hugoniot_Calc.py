@@ -4,6 +4,56 @@ import scipy.stats as stats
 import pySALEPlot as psp
 import matplotlib.pyplot as plt
 
+def two_lines(x, a, b, c, d):
+    one = a*x + b
+    two = c*x + d
+    return np.minimum(one, two)
+
+def thr_lines(x, a, b, c, d, e, f):
+    one = a*x + b
+    two = c*x + d
+    thr = e*x + f
+    A = np.minimum(one,two)
+    B = np.maximum(A,thr)
+    return B
+def twoline_piecewise_fit(Up,Us,g):
+    guess = g	       #slope, incpt, slope, incpt
+    fit, cov = sc.optimize.curve_fit(two_lines, Up, Us, p0 = guess)
+ 
+    crossover = (fit[3] - fit[1]) / (fit[0] - fit[2])
+    X_up = float(crossover)
+    Y_up = fit[0]*X_up + fit[1]
+
+    up_lin1 = np.arange(np.amin(Up),X_up,0.01)
+    up_lin2 = np.arange(X_up,np.amax(Up),0.01)
+    us_lin1 = up_lin1*fit[0] + fit[1]
+    us_lin2 = up_lin2*fit[2] + fit[3]
+
+    return up_lin1,us_lin1,up_lin2,us_lin2
+
+
+def thrline_piecewise_fit(Up,Us,g):
+    guess = g	       #slope, incpt, slope, incpt, slope, incpt
+    fit, cov = sc.optimize.curve_fit(thr_lines, Up, Us, p0 = guess)
+ 
+    crossover_a = (fit[3] - fit[1]) / (fit[0] - fit[2])
+    crossover_b = (fit[5] - fit[3]) / (fit[2] - fit[4])
+    X_upa = float(crossover_a)
+    Y_upa = fit[0]*X_upa + fit[1]
+    X_upb = float(crossover_b)
+    Y_upb = fit[2]*X_upb + fit[3]
+    print X_upa,Y_upa
+    print X_upb,Y_upb
+    print 'a={},b={},c={},d={},e={},f={}'.format(fit[0],fit[1],fit[2],fit[3],fit[4],fit[5])
+    up_lin1 = np.arange(np.amin(Up),X_upa,0.01)
+    up_lin2 = np.arange(X_upa,X_upb,0.01)
+    up_lin3 = np.arange(X_upb,np.amax(Up),0.01)
+    us_lin1 = up_lin1*fit[0] + fit[1]
+    us_lin2 = up_lin2*fit[2] + fit[3]
+    us_lin3 = up_lin3*fit[4] + fit[5]
+
+    return up_lin1,us_lin1,up_lin2,us_lin2,up_lin3,us_lin3
+
 def find_shock_front(imax,jmax,sfronts,jfronts,Pre,YC):
     dy = abs(YC[0,1] - YC[0,0])
     for i in range(0,imax,1):
@@ -82,6 +132,25 @@ def calc_postshock_PBD_state(SF, particle_bed,YC,imax,jmax,jfronts,sfronts,posba
 
     return QUP,PBD,posback,jback
 
+def hugoniot_point(QUP,YSF,TME):
+    time = TME[(YSF<-2.6)*(YSF>-3.5)]						# Only use times and particle velocities for results WITHIN the particle bed
+    up   = QUP[(YSF<-2.6)*(YSF>-3.5)]						# .8mm into the particle bed is given, for the shock to stabilise
+    sf   = YSF[(YSF<-2.6)*(YSF>-3.5)]						# Shock front positions
+    
+    UP   = np.mean(up)
+    US, intercept, other, things, too = stats.linregress(time,sf)
+    """
+    plt.figure()
+    plt.subplot(2,1,1)
+    plt.plot(time, up)
+    plt.title('Up - Time')
+    plt.subplot(2,1,2)
+    plt.plot(time,-1.*sf)
+    plt.title('Shock Position - time')
+    plt.show()
+    """
+    return UP*-1.,US*1000
+    
 
 datadir = 'All_touch/'
 N = 10 
@@ -101,24 +170,27 @@ modelS = ['model_01','model_02','model_03','model_04','model_05','model_06','mod
 VI = ([150,250,350,450,550,650,750,850,950,1050])
 [model.setScale('mm') for model in models]
 
-t1 = .2 
-t2 = .9 
+UP = np.zeros((N))
+US = np.zeros((N))
+
+t1 = .5 
+t2 = 1.2 
 III =0
 
 field1 = 'Pre'                                                       
 field2 = 'V_y'
 field3 = 'Den'
-field4 = 'TPS'
-field5 = 'Tmp'
 dirname= 'Hugoniots'
                                                       
 tstart = 1									    # Start at t>0 such that there IS a shock present
-tfin   = 250
+tfin   = 125 
 tintv  = 1
 
 
 
 for model in models:
+	sf = 0.										    # Initialise the shock front position
+	psp.mkdir_p('../{}/{}'.format(dirname,modelS[III]))
         print "current model = {}".format(modelS[III])
 	YC     = model.yc
 	XC     = model.xc
@@ -133,16 +205,16 @@ for model in models:
 
 	dy     = abs(YC[0,1] - YC[0,0])
 	dx     = abs(XC[1,0] - XC[0,0])
-	for t in range(tstart,tfin,tintv):   
+	t = 1
+	while sf < 3.45:
+		#for t in range(tstart,tfin,tintv):   
 
 	    particle_bed = 0
 
-	    step = model.readStep(['{}'.format(field1),'{}'.format(field2),'{}'.format(field3),'{}'.format(field4),'{}'.format(field5)],t)
+	    step = model.readStep(['{}'.format(field1),'{}'.format(field2),'{}'.format(field3)],t)
 	    Den  = step.data[2]*1.e-3
 	    Pre  = step.data[0]*1.e-9
 	    VY   = step.data[1]
-	    TPS  = step.data[3]*1.e-3
-	    Tmp  = step.data[4] - 273						     # Convert Temp to Celsius
 	    
 	    imax,jmax = np.shape(Den)
 	    sfronts   = np.zeros((imax))
@@ -158,33 +230,46 @@ for model in models:
 	    
 	    YSF[t]  = np.mean(sfronts)
 	    TME[t]  = step.time*1.e6
+	    sf      = np.amin(sfronts)*-1.
 
-	    QUP,PBD,posback,jback = calc_postshock_PBD_state(SF,particle_bed,YC,imax,jmax,jfronts,sfronts,posback,Den,VY) 
-
+	    QUP[t],PBD[t],posback,jback = calc_postshock_PBD_state(SF,particle_bed,YC,imax,jmax,jfronts,sfronts,posback,Den,VY) 
+	    """
 	    if t%5 == 0:
 		slope, intercept, other, things, too = stats.linregress(TME[t-4:t],YSF[t-4:t])
 		Us[t/5] = abs(slope*1000.)
-		Up[t/5] =abs( np.mean(QUP[t-4:t]))
 		Time[t/5] = TME[t]
-
+	    """
+	    t+=1
+	TME = TME[(YSF!=0.)]
+	QUP = QUP[(YSF!=0.)]
+	YSF = YSF[(YSF!=0.)]
 	plt.figure()
 	plt.plot(TME,abs(YSF),linestyle=' ',marker = 'p',color = 'm')
 	plt.ylabel('Shock Position [mm]')
 	plt.xlabel('Time [$\mu$s]')
-	plt.savefig('../{}/{}/YSF-TME.png'.format(dirname,ModelS[III]),dpi=300)
-
+	plt.savefig('../{}/{}/YSF-TME.png'.format(dirname,modelS[III]),dpi=300)
+	"""
 	plt.figure()
 	plt.plot(Time, Us, linestyle=' ',marker = 'o', color = 'r')
-	plt.ylabel('Shock Velocity [m$^{-1}$]')
+	plt.ylabel('Shock Velocity [ms$^{-1}$]')
 	plt.xlabel('Time [$\mu$s]')
-	plt.savefig('../{}/{}/Us-Time.png'.format(dirname,ModelS[III]),dpi=300)
-
+	plt.savefig('../{}/{}/Us-Time.png'.format(dirname,modelS[III]),dpi=300)
+	"""
 	plt.figure()
-	plt.plot(Time, Up, linestyle=' ',marker = 'd', color = 'b')
+	plt.plot(TME,QUP,linestyle=' ',marker = 'd', color = 'b')
 	plt.xlabel('Time [$\mu$s]')
-	plt.ylabel('Particle Velocity [m$^{-1}$]')
-	plt.savefig('../{}/{}/Up-Time.png'.format(dirname,ModelS[III]),dpi=300)
+	plt.ylabel('Particle Velocity [ms$^{-1}$]')
+	plt.savefig('../{}/{}/Up-Time.png'.format(dirname,modelS[III]),dpi=300)
+	
+	UP[III],US[III] = hugoniot_point(QUP,YSF,TME)
+
 	III += 1
+
+plt.figure(figsize=(3.5,3.5))
+plt.plot(UP,US*-1.,linestyle=' ',marker='o',mew=1,markerfacecolor='None',label='all touching',ms=5)
+plt.xlabel('Particle Velocity [ms$^{-1}$]')
+plt.ylabel('Shock Velocity [ms$^{-1}$]')
+plt.savefig('../{}/{}/hugoniot_us-up.png'.format(dirname,modelS[III]),dpi=300,bbox_inches='tight')
 
 
 
