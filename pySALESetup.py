@@ -132,14 +132,15 @@ def gen_ellipse(r_,a_,e_):
 	return mesh0, AREA
 	
 def gen_circle_p(r_):
-	"""
-	UNFINISHED
+	"""	
 	This function generates a circle within the base mesh0. It very simply converts
 	each point to a radial coordinate from the origin (the centre of the shape.
 	Then assesses if the radius is less than that of the circle in question. If it 
 	is, the cell is filled.
 	
-	This version partially fills cells initially.
+	This version partially fills cells by breaking the cells nearest the edge into 10 x 10 mini meshes
+	and then it calculates how many of these are within the mesh to get a partial fill value for that 
+	cell.
 	
 	r_ : radius of the circle, origin is assumed to be the centre of the mesh0 (in cells)
 	
@@ -150,47 +151,31 @@ def gen_circle_p(r_):
 	x0 = cppr_max + 1.	  																				# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
 	y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
 	AREA  = 0.																							# Initialise AREA as 0.
-	r_   -= 1
+	mesh0[:] = 0.																						# This is necessary to ensure the mesh is empty before use.
 	for j in range(Ns):																					# Iterate through all the x- and y-coords
 	    for i in range(Ns):						
-			xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
+			xc = 0.5*(i + (i+1)) - x0																	# Convert current coord (centre of cell) to position relative to (x0,y0) 
 			yc = 0.5*(j + (j+1)) - y0																	# Everything is now in cartesian coords relative to the mesh centre
-		
-			r = (xc/r_)**2. + (yc/r_)**2.																# Find the radial distance from current coord to (x0,y0), normalised by r_
-			if r<=1:																					# If this is less than 1 (i.e. r_) then the coord is in the circle => fill
+			r = np.sqrt((xc)**2. + (yc)**2.)															# Find the radial distance from current coord to (x0,y0)_
+			if r<=(r_-1):																				# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
 		   		mesh0[i,j] = 1.0																		# Fill cell
 		   		AREA += 1																				# Increment area
-	r_ += 1
-	R = np.zeros((5))
-	for j in range(Ns):																					# Iterate through all the x- and y-coords
-	    for i in range(Ns):						
-			xc  = 0.5*(i + (i+1)) - x0																		# Convert current coord to position relative to (x0,y0) 
-			yc  = 0.5*(j + (j+1)) - y0																		# Everything is now in cartesian coords relative to the mesh centre
-			xbl = i - x0																					# Convert current coord to position relative to (x0,y0) 
-			ybl = j - y0																					# Everything is now in cartesian coords relative to the mesh centre
-			xbr = (i+1) - x0																				# Convert current coord to position relative to (x0,y0) 
-			ybr = j - y0																					# Everything is now in cartesian coords relative to the mesh centre
-			xtl = i - x0																					# Convert current coord to position relative to (x0,y0) 
-			ytl = (j+1) - y0																				# Everything is now in cartesian coords relative to the mesh centre
-			xtr = (i+1) - x0																				# Convert current coord to position relative to (x0,y0) 
-			ytr = (j+1) - y0																				# Everything is now in cartesian coords relative to the mesh centre
-			
-			R[0] = np.sqrt(xc**2.  + yc**2.)
-			R[1] = np.sqrt(xbl**2. + ybl**2.)
-			R[2] = np.sqrt(xbr**2. + ybr**2.)
-			R[3] = np.sqrt(xtl**2. + ytl**2.)
-			R[4] = np.sqrt(xtr**2. + ytr**2.)
-			
-			cor    = np.arange(4)
-			cor   += 1
-			corner = 0
-			for m in cor:
-				R[m] - R[m+1]
-	
-			r = np.sqrt( (xc)**2. + (yc)**2. )																# Find the radial distance from current coord to (x0,y0), normalised by r_
-			if abs(r-xc)<=1.:																				# If this is less than 1 (i.e. r_) then the coord is in the circle => fill
-			    mesh0[i,j] = 1.0																			# Fill cell
-			    AREA += 1																					# Increment area
+			elif abs(r-r_)<=np.sqrt(2):																	# BUT if the cell centre is with root(2) of the circle edge, then partially fill
+				xx = np.linspace(i,i+1,11)																# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.linspace(j,j+1,11)																# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
+				for I in range(10):
+					for J in range(10):																	# Iterate through these
+						xxc = 0.5*(xx[I] + xx[J+1]) - x0												# Change their coordinates as before
+						yyc = 0.5*(yy[J] + yy[J+1]) - y0
+						r = np.sqrt((xxc)**2. + (yyc)**2. )												# Find the radial distance from current mini coord to (x0,y0)
+						if r <= r_:																		# If this is less than r_ then the mini coord is in the circle.
+							mesh0[i,j] += (.1**2.)														# Fill cell by 0.1**2 (the area of one mini-cell)
+							AREA += (.1**2.)															# Increment area by the same amount
+	"""
+	plt.figure()
+	plt.imshow(mesh0,cmap='Greys')
+	plt.show()
+	"""
 	return mesh0, AREA
 
 def gen_polygon(sides,radii):						
@@ -214,7 +199,7 @@ def gen_polygon(sides,radii):
 	n     = sides
 	R     = np.zeros((2,n))																				# Array for the coords of the vertices
 	delr  = (cppr_max-cppr_min)																			# Difference between min and max radii
-	
+	mesh0[:] = 0.																						# This is necessary to ensure the mesh is empty before use.
 	I   = np.arange(n)																					# array of vertex numbers
 	ang = np.random.rand(n)																				
 	phi = np.pi/2. - ang*np.pi*2./n - I*np.pi*2./n          									        # Generate 'n' random angles 
@@ -373,7 +358,7 @@ def drop_shape_into_mesh(shape,rr):
 			"""
 			mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])
 			touching = 1																				# Assign 'touching' a value of 1 to break loop
-			temp_shape[temp_shape>0.] = 1.																# Change all values in temp_shape to 1., if not already 
+			#temp_shape[temp_shape>0.] = 1.																# Change all values in temp_shape to 1., if not already 
 			area = np.sum(temp_shape) - np.sum(test)													# Area placed into mesh is the sum of all positive points in temp_shape - overlap
 		else:
 		    pass
@@ -433,7 +418,7 @@ def insert_shape_into_mesh(shape,x0,y0):
 	temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
 	mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])
 	""" The shape is inserted by comparing, and taking the maximum, of the two arrays  """
-	temp_shape[temp_shape>0.] = 1.																		# All non-zero elements become 1, as particle may have different material number
+#	temp_shape[temp_shape>0.] = 1.																		# All non-zero elements become 1, as particle may have different material number
 	area = np.sum(temp_shape)																			# Area is sum of all these points
 	return area
 
