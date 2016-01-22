@@ -24,7 +24,7 @@ def generate_mesh(X,Y,CPPR,pr,VF, e = 0.):
 	NB. Recently I have updated 'N' to now be the number of different particles that can be generated
 	and NOT N**2. 19-01-16
 	"""
-	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen
+	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials
 	meshx 	  = X
 	meshy 	  = Y
 	cppr_mid  = CPPR
@@ -34,6 +34,7 @@ def generate_mesh(X,Y,CPPR,pr,VF, e = 0.):
 	cppr_max  = int((1+PR)*cppr_mid)																	# Max No. cells/particle radius
 	vol_frac  = VF																						# Target fraction by volume of parts:void
 	mesh      = np.zeros((meshx,meshy))
+	materials = np.zeros((meshx,meshy))
 	xh        = np.arange(meshx)																		# arrays of physical positions of cell BOUNDARIES (not centres)
 	yh        = np.arange(meshy)
 	Ns        = 2*(cppr_max)+2																			# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
@@ -292,15 +293,15 @@ def check_coords_full(shape,x,y):
 	return CHECK																						# has material in it in the main mesh => failure and CHECK = 1
 
 
-def drop_shape_into_mesh(shape,rr):
+def drop_shape_into_mesh(shape,rr,mm):
 	"""
 	This function 'drops' a particle into the mesh and has it undergo a random walk
 	until it overlaps sufficiently with another particle and is declared 'touching'.
 	Only then is a particle fully inserted into the mesh.
 	
 	"""
-	global mesh, meshx, meshy, cppr_max, cppr_min
-	"""*** NEW CELL LIMIT IS UNTESTED!! 17-01-16 ***"""
+	global mesh, meshx, meshy, cppr_max, cppr_min, materials
+	
 	cell_limit = (np.pi*float(cppr_max)**2.)/100.														# Max number of overlapping cells should scale with area. area ~= 110 cells for 6cppr
 																										# Does NOT need to be integer since values in the mesh are floats, 
 																										# and it is their sum that is calculated.
@@ -364,7 +365,7 @@ def drop_shape_into_mesh(shape,rr):
 		    pass
 	return x,y,area
             
-def insert_shape_into_mesh(shape,x0,y0):
+def insert_shape_into_mesh(shape,x0,y0,mm):
 	"""
 	This function inserts the shape (passed as the array 'shape') into the
 	mesh at coordinate x0, y0.
@@ -387,7 +388,7 @@ def insert_shape_into_mesh(shape,x0,y0):
 	The area of the placed shape (it may not be the same as the original
 	if the shape is clipped) is returned and the global mesh is altered.
 	"""
-	global mesh, meshx, meshy, cppr_max
+	global mesh, meshx, meshy, cppr_max, materials
 	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
 	i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
 	j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
@@ -518,10 +519,10 @@ def mat_assignment(mats,xc,yc,r):
 	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
 	i = 0																								# Counts the number of particles that have been assigned
 	while i < N:																						# Loop every particle and assign each one in turn.	
-		lowx   = xc[i] - cppr_mid*8.																	# Create a 'box' around each particle (in turn) that is 4 diameters by 4 diameters
-		higx   = xc[i] + cppr_mid*8.
-		lowy   = yc[i] - cppr_mid*8.
-		higy   = yc[i] + cppr_mid*8.
+		lowx   = xc[i] - cppr_mid*6.																	# Create a 'box' around each particle (in turn) that is 4 diameters by 4 diameters
+		higx   = xc[i] + cppr_mid*6.
+		lowy   = yc[i] - cppr_mid*6.
+		higy   = yc[i] + cppr_mid*6.
 		boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)*(MAT!=0.)] 								# Array containing a list of all material numbers within the 'box' (disregarding unassigned materials)
 		M      = mats[np.in1d(mats,boxmat,invert=True)]													# Array containing all values in 'mats' that are NOT present in the box
 		if np.size(M) == 0:																				# If M contains no values, then all the  materials are assigned at least once in the box already
@@ -567,3 +568,103 @@ def mat_assignment_2(mats,r):
 		i += 1
 		j += 1
 	return MAT
+
+def mat_assignment_3(mats,xc,yc):
+	N    = np.size(xc)																					# No. of particles
+	M    = np.size(mats)
+	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
+	i    = 0
+	while np.any(MAT==0.):
+		if i>=M: i = 0
+		X = np.random.uniform(np.amin(xc),np.amax(xc))
+		Y = np.random.uniform(np.amin(yc),np.amax(yc))
+		MAT[(abs(xc-X)<1.)*(abs(yc-Y)<1.)] = mats[i]
+		i += 1
+	plt.figure()
+	plt.plot(xc,MAT,linestyle=' ',marker='o')
+	plt.show()
+	return MAT
+
+def mat_assignment_4(mats,xc):
+	N    = np.size(xc)																					# No. of particles
+	M    = np.size(mats)
+	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
+	i    = 0
+	indices = np.argsort(xc)
+	x_sorted = xc[indices]
+	for item in x_sorted:
+		if i >= M: i = 0
+		MAT[xc==item] = mats[i]
+		i+=1
+	plt.figure()
+	plt.plot(xc,MAT,linestyle=' ',marker='o')
+	plt.show()
+	return MAT
+
+def part_distance(X,Y,radii,MAT,plot=False):
+	"""
+	This is a simple function to calculate the average number of contacts between
+	particles and plot the contacts graphically, if needed.
+
+	*** NB THIS FUNCTION WILL NOT WORK WELL FOR PR != 0. ***
+
+	The particle centres and radii are taken. The distance between two touching 
+	particles should be approximately 1 diameter (centre to centre). So an 
+	upper bound on this distance is calculated. This is set as half the radius of
+	a particle divided by its cppr_mid, i.e. approximately one cell. 
+
+	Graphically, if plot = True, the full mesh is generated with the appropriate
+	materials, and red lines are drawn between the centres of particles in contact.
+
+	X     : Full set of x coords (SI units) for each particle centre
+	Y     : Full set of y coords (SI units) for each particle centre
+	radii : Full set of radii for each particle (SI)
+	MAT   : Array containing the material number for each particle
+	plot  : Condition for plotting. True => Will plot a figure, False (default) => will not.
+
+	returns the contact measure A, and saves the plot if wanted
+	"""
+	global cppr_mid, meshx, meshy,cppr_max
+	
+	N           = np.size(X)					  														# No. of particles
+	mean_radii  = np.mean(radii)				   														# Calculate the mean radii	
+	D           = np.zeros((N))																			# D is an array for the distances between particles
+	GRIDSPC     = np.amax(radii)/cppr_max																# Physical distance/cell (SI)
+	Dtouch      = []																					# The final list of distances for parts in contact
+	diameters   = radii*2.																				# All the diameters
+	error       = radii/cppr_mid																		# The assumed error on the distances between particles
+	upper_bound = diameters + error/2.																	# The upper bound on this distance
+	print 'Max, Min, Mean radii = {},{},{}'.format(np.amax(radii),np.amin(radii),mean_radii)
+	
+	if plot == True:																					# If plot == True then produce a figure
+	    fig = plt.figure()
+	    ax = fig.add_subplot(111,aspect='equal')
+	    ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic matches the mesh in orientation
+	    ax.set_ylim(meshx*GRIDSPC,0)
+	    for i in range(N):																				# Plot each circle in turn
+	        circle = plt.Circle((X[i],Y[i]),radii[i],color='{:1.2f}'.format((MAT[i])*.5/np.amax(MAT)))  # give each one a color based on their material number. NB any color = 1. will be WHITE 
+	        ax.add_patch(circle)
+	
+	for i in range(N-1):
+		D *= 0.																							 # Initialise D eah loop, in case it is full and to ensure nothing carries over
+		D -= 1.
+		for j in range(N-1):				  															 # find distances between current particle and ALL other particles and store these in D
+			dx = X[i] - X[j]
+			dy = Y[i] - Y[j]
+			distance = np.sqrt(dx**2. + dy**2.)
+			D[j] = distance
+			if plot == True: 																			
+				if D[j]>0. and D[j]<upper_bound[i]:		   												 # If particles overlap draw a red line between their centres
+					ax.plot([X[i],X[j]],[Y[i],Y[j]],lw=1.,color='r')
+					Dtouch.append(D[j])
+	    
+	
+	Dtouch = np.array(Dtouch)				   															 # Convert to numpy array
+	 
+	A = float(np.size(Dtouch))/float(N)		   															 # The size of Dtouch/total part number is the mean
+	if plot == True: 
+		ax.set_title('$A = ${:1.3f}'.format(A))
+		plt.savefig('contacts_figure_A-{:1.3f}.png'.format(A),dpi=400)									 # Save the figure
+		plt.show()
+	
+	return A
