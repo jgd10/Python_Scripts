@@ -635,6 +635,7 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	error       = radii/cppr_mid																		# The assumed error on the distances between particles
 	upper_bound = diameters + error/2.																	# The upper bound on this distance
 	print 'Max, Min, Mean radii = {},{},{}'.format(np.amax(radii),np.amin(radii),mean_radii)
+	B           = 0																						# B is the number of contacts that exist between the same materials
 	
 	if plot == True:																					# If plot == True then produce a figure
 	    fig = plt.figure()
@@ -653,18 +654,20 @@ def part_distance(X,Y,radii,MAT,plot=False):
 			dy = Y[i] - Y[j]
 			distance = np.sqrt(dx**2. + dy**2.)
 			D[j] = distance
-			if plot == True: 																			
-				if D[j]>0. and D[j]<upper_bound[i]:		   												 # If particles overlap draw a red line between their centres
+			if D[j]>0. and D[j]<upper_bound[i]:			   												 # If particles overlap draw a red line between their centres
+				if plot == True: 																			
 					ax.plot([X[i],X[j]],[Y[i],Y[j]],lw=1.,color='r')
-					Dtouch.append(D[j])
+				Dtouch.append(D[j])
+				if MAT[i] == MAT[j]: B += 1
 	    
 	
 	Dtouch = np.array(Dtouch)				   															 # Convert to numpy array
 	 
 	A = float(np.size(Dtouch))/float(N)		   															 # The size of Dtouch/total part number is the mean
+	B = float(B)/float(N)																				 # B is the average number of contacts/particle that are between identical materials
 	if plot == True: 
 		ax.set_title('$A = ${:1.3f}'.format(A))
-		plt.savefig('contacts_figure_A-{:1.3f}.png'.format(A),dpi=400)									 # Save the figure
+		plt.savefig('contacts_figure_A-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=400)									 # Save the figure
 		plt.show()
 	
-	return A
+	return A, B
