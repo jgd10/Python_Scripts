@@ -29,19 +29,19 @@ def generate_mesh(X,Y,CPPR,pr,VF, e = 0.):
 	meshy 	  = Y
 	cppr_mid  = CPPR
 	PR        = pr
-	eccen     = e 																						# Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
-	cppr_min  = int((1-PR)*cppr_mid)					    											# Min No. cells/particle radius 
+	eccen     = e																				# Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
+	cppr_min  = int((1-PR)*cppr_mid)													    				# Min No. cells/particle radius 
 	cppr_max  = int((1+PR)*cppr_mid)																	# Max No. cells/particle radius
-	vol_frac  = VF																						# Target fraction by volume of parts:void
+	vol_frac  = VF																				# Target fraction by volume of parts:void
 	mesh      = np.zeros((meshx,meshy))
 	materials = np.zeros((meshx,meshy))
 	xh        = np.arange(meshx)																		# arrays of physical positions of cell BOUNDARIES (not centres)
 	yh        = np.arange(meshy)
-	Ns        = 2*(cppr_max)+2																			# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
-	N         = 20																						# N is the number of different particles that can be generated  
+	Ns        = 2*(cppr_max)+2															    			# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
+	N         = 20																				# N is the number of different particles that can be generated  
 	part_area = np.zeros((N))
 	mesh0     = np.zeros((Ns,Ns))																		# Generate mesh that is square and slightly larger than the max particle size
-																										# This will be the base for any shapes that are generated
+																						# This will be the base for any shapes that are generated
 	mesh_Shps = np.zeros((N,Ns,Ns))																		# Generate an array of meshes of this size. of size N (Ns x Ns x N)
 
 def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
@@ -60,10 +60,10 @@ def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
 	Returns a float value.
 	"""
 	global cppr_mid, meshx, meshy, vol_frac
-	Area_total = meshx*meshy																			# Total Area of mesh
+	Area_total = meshx*meshy																		# Total Area of mesh
 	Area_1part = np.pi*cppr_mid**2.																		# Area of one particle
-	No_parts   = int(Area_total*vol_frac/Area_1part)+1													# Approx No. Particles, covering the volume fraction reqd.
-	No_parts   = int(No_parts)																			# There will be overlaps so overestimate by 10%
+	No_parts   = int(Area_total*vol_frac/Area_1part)+1															# Approx No. Particles, covering the volume fraction reqd.
+	No_parts   = int(No_parts)																		# There will be overlaps so overestimate by 10%
 	return No_parts							
 
 def gen_circle(r_):
@@ -77,20 +77,20 @@ def gen_circle(r_):
 
 	mesh0 and an AREA are returned
 	"""
-	global mesh0, Ns																					# mesh0 is Ns x Ns in size
-	mesh0[:] = 0. 																						# Ensure that mesh0 is all zeros (as it should be before this is called)
-	x0 = cppr_max + 1.	  																				# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-	y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
-	AREA  = 0.																							# Initialise AREA as 0.
-	for j in range(Ns):																					# Iterate through all the x- and y-coords
+	global mesh0, Ns																			# mesh0 is Ns x Ns in size
+	mesh0[:] = 0. 																				# Ensure that mesh0 is all zeros (as it should be before this is called)
+	x0 = cppr_max + 1.	  																		# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+	y0 = cppr_max + 1.																			# Define x0, y0 to be the centre of the mesh
+	AREA  = 0.																				# Initialise AREA as 0.
+	for j in range(Ns):																			# Iterate through all the x- and y-coords
 	    for i in range(Ns):						
-		xc = 0.5*(i + (i+1)) - x0																		# Convert current coord to position relative to (x0,y0) 
-		yc = 0.5*(j + (j+1)) - y0																		# Everything is now in cartesian coords relative to the mesh centre
+		xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
+		yc = 0.5*(j + (j+1)) - y0																	# Everything is now in cartesian coords relative to the mesh centre
 		
 		r = (xc/r_)**2. + (yc/r_)**2.																	# Find the radial distance from current coord to (x0,y0), normalised by r_
-		if r<=1:																						# If this is less than 1 (i.e. r_) then the coord is in the circle => fill
-		    mesh0[i,j] = 1.0																			# Fill cell
-		    AREA += 1																					# Increment area
+		if r<=1:																			# If this is less than 1 (i.e. r_) then the coord is in the circle => fill
+		    mesh0[i,j] = 1.0																		# Fill cell
+		    AREA += 1																			# Increment area
 	return mesh0, AREA
 
 def gen_ellipse(r_,a_,e_):
@@ -107,9 +107,9 @@ def gen_ellipse(r_,a_,e_):
 	x0 = cppr_max + 1.
 	y0 = cppr_max + 1.
 	AREA = 0.
-	mesh0[:] = 0.																						# A safety feature to ensure that mesh0 is always all 0. before starting
+	mesh0[:] = 0.																				# A safety feature to ensure that mesh0 is always all 0. before starting
 	A = r_
-	B = A*np.sqrt(1.-e_**2.)																			# A is the semi-major radius, B is the semi-minor radius
+	B = A*np.sqrt(1.-e_**2.)																		# A is the semi-major radius, B is the semi-minor radius
 	for j in range(Ns):
 	    for i in range(Ns):
 	        xc = 0.5*(i + (i+1)) - x0
@@ -147,31 +147,31 @@ def gen_circle_p(r_):
 	
 	mesh0 and an AREA are returned
 	"""
-	global mesh0, Ns																					# mesh0 is Ns x Ns in size
-	CL = 1.																								# This is mesh0 so cell length is simply '1.'
-	x0 = cppr_max + 1.	  																				# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-	y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
-	AREA  = 0.																							# Initialise AREA as 0.
-	mesh0[:] = 0.																						# This is necessary to ensure the mesh is empty before use.
-	for j in range(Ns):																					# Iterate through all the x- and y-coords
+	global mesh0, Ns																			# mesh0 is Ns x Ns in size
+	CL = 1.																					# This is mesh0 so cell length is simply '1.'
+	x0 = cppr_max + 1.	  																		# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+	y0 = cppr_max + 1.																			# Define x0, y0 to be the centre of the mesh
+	AREA  = 0.																				# Initialise AREA as 0.
+	mesh0[:] = 0.																				# This is necessary to ensure the mesh is empty before use.
+	for j in range(Ns):																			# Iterate through all the x- and y-coords
 	    for i in range(Ns):						
-			xc = 0.5*(i + (i+1)) - x0																	# Convert current coord (centre of cell) to position relative to (x0,y0) 
-			yc = 0.5*(j + (j+1)) - y0																	# Everything is now in cartesian coords relative to the mesh centre
+			xc = 0.5*(i + (i+1)) - x0																# Convert current coord (centre of cell) to position relative to (x0,y0) 
+			yc = 0.5*(j + (j+1)) - y0																# Everything is now in cartesian coords relative to the mesh centre
 			r = np.sqrt((xc)**2. + (yc)**2.)															# Find the radial distance from current coord to (x0,y0)_
-			if r<=(r_-1):																				# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
-		   		mesh0[i,j] = 1.0																		# Fill cell
-		   		AREA += 1																				# Increment area
-			elif abs(r-r_)<=np.sqrt(2):																	# BUT if the cell centre is with root(2) of the circle edge, then partially fill
-				xx = np.linspace(i,i+1,11)																# Create 2 arrays of 11 elements each and with divisions of 0.1
-				yy = np.linspace(j,j+1,11)																# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
+			if r<=(r_-1):																		# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
+		   		mesh0[i,j] = 1.0																# Fill cell
+		   		AREA += 1																	# Increment area
+			elif abs(r-r_)<=np.sqrt(2):																# BUT if the cell centre is with root(2) of the circle edge, then partially fill
+				xx = np.linspace(i,i+1,11)															# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.linspace(j,j+1,11)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
 				for I in range(10):
-					for J in range(10):																	# Iterate through these
+					for J in range(10):															# Iterate through these
 						xxc = 0.5*(xx[I] + xx[J+1]) - x0												# Change their coordinates as before
 						yyc = 0.5*(yy[J] + yy[J+1]) - y0
 						r = np.sqrt((xxc)**2. + (yyc)**2. )												# Find the radial distance from current mini coord to (x0,y0)
-						if r <= r_:																		# If this is less than r_ then the mini coord is in the circle.
-							mesh0[i,j] += (.1**2.)														# Fill cell by 0.1**2 (the area of one mini-cell)
-							AREA += (.1**2.)															# Increment area by the same amount
+						if r <= r_:															# If this is less than r_ then the mini coord is in the circle.
+							mesh0[i,j] += (.1**2.)													# Fill cell by 0.1**2 (the area of one mini-cell)
+							AREA += (.1**2.)													# Increment area by the same amount
 	"""
 	plt.figure()
 	plt.imshow(mesh0,cmap='Greys')
@@ -195,29 +195,29 @@ def gen_polygon(sides,radii):
 
 	The area of the shape and it's mesh0 are returned.
 	"""
-	global mesh0, cppr_min, cppr_max, n_min, n_max, Ns													# Only the angles used are now randomly selected.
+	global mesh0, cppr_min, cppr_max, n_min, n_max, Ns															# Only the angles used are now randomly selected.
 	AREA  = 0.
 	n     = sides
-	R     = np.zeros((2,n))																				# Array for the coords of the vertices
-	delr  = (cppr_max-cppr_min)																			# Difference between min and max radii
-	mesh0[:] = 0.																						# This is necessary to ensure the mesh is empty before use.
-	I   = np.arange(n)																					# array of vertex numbers
+	R     = np.zeros((2,n))																			# Array for the coords of the vertices
+	delr  = (cppr_max-cppr_min)																		# Difference between min and max radii
+	mesh0[:] = 0.																				# This is necessary to ensure the mesh is empty before use.
+	I   = np.arange(n)																			# array of vertex numbers
 	ang = np.random.rand(n)																				
-	phi = np.pi/2. - ang*np.pi*2./n - I*np.pi*2./n          									        # Generate 'n' random angles 
-	rho = radii				    																		# Ensure each vertex is within an arc, 1/nth of a circle
-	R[0,:] = rho*np.cos(phi)																			# Each vertex will also be successive, such that drawing a line between
-	R[1,:] = rho*np.sin(phi)																			# each one in order, will result in no crossed lines.
-																										# Convert into cartesian coords and store in R
-	qx = 0.																								# Make the reference point (q) zero, i.e. the centre of the shape
-	qy = 0.																								# All dimensions are in reference to the central coordinates.
+	phi = np.pi/2. - ang*np.pi*2./n - I*np.pi*2./n																# Generate 'n' random angles 
+	rho = radii				    																# Ensure each vertex is within an arc, 1/nth of a circle
+	R[0,:] = rho*np.cos(phi)																		# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = rho*np.sin(phi)																		# each one in order, will result in no crossed lines.
+																						# Convert into cartesian coords and store in R
+	qx = 0.																					# Make the reference point (q) zero, i.e. the centre of the shape
+	qy = 0.																					# All dimensions are in reference to the central coordinates.
 	x0 = cppr_max + 1.  
-	y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
-	for j in range(Ns-1):																				# Iterate through all the x- and y-coords
-		for i in range(Ns-1):																			# N-1 because we want the centres of each cell, and there are only N-1 of these!
-			xc = 0.5*(i + (i+1)) - x0   														    	# Convert current coord to position relative to (x0,y0) 
-			yc = 0.5*(j + (j+1)) - y0																	# Everything is now in indices, with (x0,y0)
+	y0 = cppr_max + 1.																			# Define x0, y0 to be the centre of the mesh
+	for j in range(Ns-1):																			# Iterate through all the x- and y-coords
+		for i in range(Ns-1):																		# N-1 because we want the centres of each cell, and there are only N-1 of these!
+			xc = 0.5*(i + (i+1)) - x0																# Convert current coord to position relative to (x0,y0) 
+			yc = 0.5*(j + (j+1)) - y0																# Everything is now in indices, with (x0,y0)
 
-			sx = xc - qx																				# s = vector difference between current coord and ref coord
+			sx = xc - qx																		# s = vector difference between current coord and ref coord
 			sy = yc - qy		
 			intersection = 0																			# Initialise no. intersections as 0
 			for l in range(n-1):																		# cycle through each edge, bar the last
@@ -302,30 +302,34 @@ def drop_shape_into_mesh(shape,rr,mm):
 	"""
 	global mesh, meshx, meshy, cppr_max, cppr_min, materials
 	
-	cell_limit = (np.pi*float(cppr_max)**2.)/100.														# Max number of overlapping cells should scale with area. area ~= 110 cells for 6cppr
-																										# Does NOT need to be integer since values in the mesh are floats, 
-																										# and it is their sum that is calculated.
-	touching   = 0																						# Initialise the indicators for this function
-	passes     = 1																						# here are 'passes' and 'counter' similar to check_coords_full
-	counter    = 0																						# But this time there is 'touching' which indicates contact between particles
+	cell_limit = (np.pi*float(cppr_max)**2.)/100.																# Max number of overlapping cells should scale with area. area ~= 110 cells for 6cppr
+																						# Does NOT need to be integer since values in the mesh are floats, 
+																						# and it is their sum that is calculated.
+	touching   = 0																				# Initialise the indicators for this function
+	passes     = 1																				# here are 'passes' and 'counter' similar to check_coords_full
+	counter    = 0																				# But this time there is 'touching' which indicates contact between particles
 	x,y = gen_coord_basic()
 	
 	Nx, Ny     = meshx, meshy
 	Px, Py     = np.shape(shape)
 	while touching == 0:	
-		if x > Nx-rr or x < rr: x,y = gen_coord_basic()
-		if y > Ny-rr or y < rr: x,y = gen_coord_basic()
-		i_edge   = x - cppr_max - 1																		# Location of the edge of the polygon's mesh, within the main mesh.
+		#if x > Nx-rr or x < rr: x,y = gen_coord_basic()
+		#if y > Ny-rr or y < rr: x,y = gen_coord_basic()
+		if x > Nx: x = 0
+		if x < 0:  x = Nx
+		if y > Ny: y = 0
+		if y < 0:  y = Ny																		# If the coord moves out of the mesh, wrap back around.
+		i_edge   = x - cppr_max - 1																	# Location of the edge of the polygon's mesh, within the main mesh.
 		j_edge   = y - cppr_max - 1
-		i_finl   = x + cppr_max + 1																		# The indices refer to the close edge to the origin, the extra cell should be added on the other side
-		j_finl   = y + cppr_max + 1																		# i.e. the side furthest from the origin
+		i_finl   = x + cppr_max + 1																	# The indices refer to the close edge to the origin, the extra cell should be added on the other side
+		j_finl   = y + cppr_max + 1																	# i.e. the side furthest from the origin
 		    	
-		if i_edge < 0:																					# If the coords have the particle being generated over the mesh boundary
-		    I_initial = abs(i_edge)																		# This bit checks for this, and reassigns a negative starting index to zero
-		    i_edge    = 0																				# However, the polygon's mesh will not completely be in the main mesh 
-		else:																							# So I_initial defines the cut-off point
-		    I_initial = 0																				# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
-		if j_edge < 0:																					# Repeat for the j-coordinate
+		if i_edge < 0:																			# If the coords have the particle being generated over the mesh boundary
+		    I_initial = abs(i_edge)																	# This bit checks for this, and reassigns a negative starting index to zero
+		    i_edge    = 0																		# However, the polygon's mesh will not completely be in the main mesh 
+		else:																				# So I_initial defines the cut-off point
+		    I_initial = 0																		# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
+		if j_edge < 0:																			# Repeat for the j-coordinate
 		    J_initial = abs(j_edge) 
 		    j_edge = 0
 		else:
