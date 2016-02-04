@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X,Y,CPPR,pr,VF, e = 0.):
+def generate_mesh(X,Y,CPPR,pr,VF,mat_no,e = 0.):
 	"""
 	This function generates the global mesh that all particles will be inserted into.
 	Initially it reads in several parameters and renames them within the module. Then 
@@ -24,24 +24,27 @@ def generate_mesh(X,Y,CPPR,pr,VF, e = 0.):
 	NB. Recently I have updated 'N' to now be the number of different particles that can be generated
 	and NOT N**2. 19-01-16
 	"""
-	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials
+	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats
+
+	Ms        = mat_no	 																				# M is the number of materials within the mesh
+	mats      = np.arange(Ms)+1.
 	meshx 	  = X
 	meshy 	  = Y
 	cppr_mid  = CPPR
 	PR        = pr
-	eccen     = e																				# Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
-	cppr_min  = int((1-PR)*cppr_mid)													    				# Min No. cells/particle radius 
+	eccen     = e																						# Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
+	cppr_min  = int((1-PR)*cppr_mid)													    			# Min No. cells/particle radius 
 	cppr_max  = int((1+PR)*cppr_mid)																	# Max No. cells/particle radius
-	vol_frac  = VF																				# Target fraction by volume of parts:void
+	vol_frac  = VF																						# Target fraction by volume of parts:void
 	mesh      = np.zeros((meshx,meshy))
-	materials = np.zeros((meshx,meshy))
+	materials = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
 	xh        = np.arange(meshx)																		# arrays of physical positions of cell BOUNDARIES (not centres)
 	yh        = np.arange(meshy)
 	Ns        = 2*(cppr_max)+2															    			# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
-	N         = 20																				# N is the number of different particles that can be generated  
+	N         = 20																						# N is the number of different particles that can be generated  
 	part_area = np.zeros((N))
 	mesh0     = np.zeros((Ns,Ns))																		# Generate mesh that is square and slightly larger than the max particle size
-																						# This will be the base for any shapes that are generated
+																										# This will be the base for any shapes that are generated
 	mesh_Shps = np.zeros((N,Ns,Ns))																		# Generate an array of meshes of this size. of size N (Ns x Ns x N)
 
 def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
@@ -293,7 +296,7 @@ def check_coords_full(shape,x,y):
 	return CHECK																						# has material in it in the main mesh => failure and CHECK = 1
 
 
-def drop_shape_into_mesh(shape,rr,mm):
+def drop_shape_into_mesh(shape,rr):
 	"""
 	This function 'drops' a particle into the mesh and has it undergo a random walk
 	until it overlaps sufficiently with another particle and is declared 'touching'.
@@ -361,7 +364,9 @@ def drop_shape_into_mesh(shape,rr,mm):
 		    #plt.plot(x,y,color='r',marker='o',ms='5')
 		    #plt.show()
 			"""
-			mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])
+			mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])	
+																										# materials contains each cell's material number. Prior to mat assignment 
+																										#it is just the particle number
 			touching = 1																				# Assign 'touching' a value of 1 to break loop
 			#temp_shape[temp_shape>0.] = 1.																# Change all values in temp_shape to 1., if not already 
 			area = np.sum(temp_shape) - np.sum(test)													# Area placed into mesh is the sum of all positive points in temp_shape - overlap
@@ -369,7 +374,7 @@ def drop_shape_into_mesh(shape,rr,mm):
 		    pass
 	return x,y,area
             
-def insert_shape_into_mesh(shape,x0,y0,mm):
+def insert_shape_into_mesh(shape,x0,y0):
 	"""
 	This function inserts the shape (passed as the array 'shape') into the
 	mesh at coordinate x0, y0.
@@ -422,11 +427,57 @@ def insert_shape_into_mesh(shape,x0,y0,mm):
 	
 	temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
 	mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])
+	
+														
 	""" The shape is inserted by comparing, and taking the maximum, of the two arrays  """
 #	temp_shape[temp_shape>0.] = 1.																		# All non-zero elements become 1, as particle may have different material number
 	area = np.sum(temp_shape)																			# Area is sum of all these points
 	return area
 
+def place_shape(shape,x0,y0,mat):
+	"""
+	This function inserts the shape (passed as the array 'shape') into the
+	correct materials mesh at coordinate x0, y0.
+	
+	shape  : mesh0 array of the shape to be inserted
+	x0, y0 : The x and y coords at which the shape is to be placed. (These are the shape's origin point)
+	mat    : this is the index of the material
+	
+	This method relies on there being no particles of identical materials being in contact (i.e. no overlapping particles within the materials mesh)
+
+	nothing is returned.
+	"""
+	global mesh, meshx, meshy, cppr_max, materials
+	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
+	i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
+	j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
+	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin, an extra cell is added either side
+	j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
+	
+	""" 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
+	if i_edge < 0:																						# Condition if the coords have the particle being generated over the mesh boundary
+		I_initial = abs(i_edge)																			# a negative starting index is reassigned to zero
+		i_edge    = 0																					# The polygon's mesh will not completely be in the main mesh 
+	else:																								# So I_initial defines the cut-off point
+		I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
+	if j_edge < 0:																						# Repeat for the j-coordinate
+		J_initial = abs(j_edge) 
+		j_edge = 0
+	else:
+		J_initial = 0
+	
+	I_final = Px 
+	if (i_finl)>meshx:																					# This section deals with the occurrence of the shape overlapping with the opposite ends of
+		I_final -= abs(meshx-i_finl) 																	# meshes. And works on the same principles as above, although the maths is slightly different
+		i_finl   = meshx
+	J_final = Py
+	if (j_finl)>meshy:
+		J_final -= abs(meshy-j_finl) 
+		j_finl   = meshy
+	temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
+	materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
+	
+														
 
 def gen_coord_basic():																					
 	"""
@@ -663,12 +714,17 @@ def mat_assignment(mats,xc,yc,r):
 		BXM= boxmat[ind]																				# Sort the materials into the corresponding order
 		DU = np.unique(BXM[:M])																			# Only select the M closest particles
 		if np.array_equal(DU, mats):																	# If the unique elements in this array equate the array of materials then all are taken
-			MAT[i] = BXM[M-1]																			# Set the particle material to be of the one furthest from the starting particle
+			mm     = BXM[M-1]                                                                           
+			MAT[i] = mm		  						           											# Set the particle material to be of the one furthest from the starting particle
+			materials[materials==-1*(i+1)] = mm                                                            # Assign all filled cells 
 		else:																							# Else there is a material in mats that is NOT in DU
 			indices = np.in1d(mats,DU,invert=True)														# This finds the indices of all elements that only appear in mats and not DU
-			MAT[i] = np.random.choice(mats[indices],1)													# Randomly select one to be the current particle's material number
+			mm      = np.random.choice(mats[indices],1)
+			MAT[i]  = mm                            													# Randomly select one to be the current particle's material number
+			materials[materials==-1*(i+1)] = mm
 		i += 1																							# Increment i
 	return MAT
+
 
 def part_distance(X,Y,radii,MAT,plot=False):
 	"""
@@ -736,7 +792,49 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	B = float(B)/float(N)																				 # B is the average number of contacts/particle that are between identical materials
 	if plot == True: 
 		ax.set_title('$A = ${:1.3f}'.format(A))
-		plt.savefig('contacts_figure_A-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=400)									 # Save the figure
+		plt.savefig('contacts_figure_A-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=400)						 # Save the figure
 		plt.show()
 	
 	return A, B
+
+def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
+	"""
+	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
+	This compiles the integer indices of each cell, as well as the material in them and the fraction
+	of matter present. It saves all this as the filename specified by the user, with the default as 
+	meso_m.iSALE
+
+	fname   : The filename to be used for the text file being used
+	SHAPENO : The indexes of each shape within mesh_Shps
+	X       : The xcoord of the shape centre (in cells)
+	Y       : The ycoord of the shape centre (in cells)
+	MATS    : The array of each corresponding material number to each particle
+	n       : The total number of particles
+
+	returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
+
+	NB This function will remake the mesh.
+	"""
+	global mesh, mesh_Shps,meshx,meshy
+	FRAC = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+	XI   = np.zeros((meshx*meshy))	
+	YI   = np.zeros((meshx*meshy))
+	for k in range(n):
+		place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k])
+
+	K = 0
+	for i in range(meshx):
+		for j in range(meshy):
+			XI[K] = i
+			YI[K] = j
+			for mm in range(Ms):
+				FRAC[mm,K] = materials[mm,i,j]
+			K += 1
+	ALL = np.column_stack((XI,YI,FRAC.transpose()))
+	np.savetxt(fname,ALL)
+	return
+
+
+
+
+# PLAN: REMAKE MESH A SECOND TIME UPON COMPLETION. But now store the index of each cell and the fraction in it in the arrays.
