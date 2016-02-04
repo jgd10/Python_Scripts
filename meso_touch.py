@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.spatial as scsp
 import scipy as sc
 import random
 import matplotlib.pyplot as plt
@@ -6,20 +7,19 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .55
-X_cells    = 500 
-Y_cells    = 500 
+vol_frac   = .45
+X_cells    = 1000 
+Y_cells    = 1000 
 PR         = 0.
-cppr       = 6 
-vfraclimit = .4                                # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+cppr       = 10 
+vfraclimit = 0.1                                # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
-#X_cells   -= int(2*cppr*1.1)
-#Y_cells   -= int(2*cppr*1.1)
+mat_no     = 5
 
-pss.generate_mesh(X_cells,Y_cells,cppr,PR,vol_frac)
-
+pss.generate_mesh(X_cells,Y_cells,cppr,PR,vol_frac,mat_no)
+mats = pss.mats
 
 """ #################################################################################### """
 """ #######   Initialise variables and estimate the number of particles needed   ####### """
@@ -28,14 +28,11 @@ counter   = 0
 counter_2 = 0
 j = 0                                    # No. particles placed
 J = 0                                    # No. particles tried
-N = pss.N                                    # test value
 vol_placed_frac = 0.
 placed_part_area = []
-#print "Estimated No. Particles = {}".format(Nps)            # Calculate rough no. particles required
 
-mats = np.array([1.,2.,3.,4.,5.])
 ii = 0
-MM = np.size(mats)
+MM = pss.Ms
 
 
 """ #################################################################################### """
@@ -47,7 +44,7 @@ part_radii = []
 cppr_range = pss.cppr_max - pss.cppr_min
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
     r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
-    pss.mesh_Shps[i,:,:],part_area[i] = pss.gen_circle(r)
+    pss.mesh_Shps[i,:,:],part_area[i] = pss.gen_circle_p(r)
     part_radii.append(r)
 
 
@@ -82,7 +79,7 @@ try:
             fail = 1
             while fail == 1:
                 x,y,fail = pss.gen_coord(pss.mesh_Shps[I,:,:])
-            area = pss.insert_shape_into_mesh(pss.mesh_Shps[I,:,:],x,y,mats[ii])
+            area = pss.insert_shape_into_mesh(pss.mesh_Shps[I,:,:],x,y)
             ii+= 1
             J += 1                                # J is now the total number of particles inserted
             placed_part_area.append(area)                    # Update the list of areas
@@ -98,7 +95,7 @@ try:
             fail = 1
             while fail == 1:
                 x,y,fail = pss.gen_coord(pss.mesh_Shps[I,:,:])
-            area = pss.insert_shape_into_mesh(pss.mesh_Shps[I,:,:],x,y,mats[ii])
+            area = pss.insert_shape_into_mesh(pss.mesh_Shps[I,:,:],x,y)
             ii += 1
             J += 1                                # J is now the total number of particles inserted
             placed_part_area.append(area)                    # Update the list of areas
@@ -110,7 +107,7 @@ try:
         else: 
             if ii >= MM: ii = 0
             I = random.randint(nmin,nmax)                    # Generate a random number to randomly select one of the generated shapes, to be tried for this loop
-            x,y,area = pss.drop_shape_into_mesh(pss.mesh_Shps[I,:,:],part_radii[I],mats[ii])
+            x,y,area = pss.drop_shape_into_mesh(pss.mesh_Shps[I,:,:],part_radii[I])
             J += 1
             ii+= 1
             placed_part_area.append(area)                    # Update the list of areas
@@ -130,49 +127,50 @@ I_shape   = np.array(I_shape)
 J_shape   = np.array(J_shape)    
 xcr       = np.array(xcoords)
 ycr       = np.array(ycoords)
+zcr       = np.zeros_like(xcr)
 radii     = np.array(radii)
+
+XINT      = np.copy(xcr)
+YINT      = np.copy(ycr)
 
 xcr   =   xcr.astype(float)
 ycr   =   ycr.astype(float)
+zcr   =   zcr.astype(float)
 radii = radii.astype(float)
 
 
+
 """
-Mats      = np.zeros_like(xcoords)
-Mats     += 2
+XY = np.column_stack((xcr,ycr))
 
-for h in range(np.amax(J_shape)):                    
-    Xc = xcr - xcr[h]
-    Yc = ycr - ycr[h]
-    R  = np.sqrt(Xc**2. + Yc**2.)
-    for material in Mats[(R<(3.*radii[h]))*(R>0.)]:
-        if material == Mats[h]:
-            MatNum = np.roll(MatNum,1)
-            Mats[h] = MatNum[0]
-            pss.mesh[(xcr[h]-radii[h]):(xcr[h]+radii[h]), (ycr[h]-radii[h]):(ycr[h]+radii[h])] *= Mats[h]
-
-
-sort_indices  = np.argsort(Mats)                    # Sort areas into smallest to largest
-xcoords       = xcoords[sort_indices]                    # Arrange as appropriate
-ycoords       = ycoords[sort_indices]                    # Arrange as appropriate
-zcoords       = zcoords[sort_indices]                    # Arrange as appropriate
-radii         =   radii[sort_indices]                    # Arrange as appropriate
+mytree = scsp.cKDTree(XY,leafsize=100)
+for item in XY:
+	print mytree.query(item, k=np.size(mats)+1, distance_upper_bound=pss.cppr_max*3)
 """
+
+
 MAT = pss.mat_assignment(mats,xcr,ycr,radii)
-zcr      = np.zeros_like(xcoords)
 DMY      = np.zeros_like(xcoords)
 xcr     *= GRIDSPC
 ycr     *= GRIDSPC
 zcr     *= GRIDSPC
 radii   *= GRIDSPC
+
+
+
+
+
 A,B = pss.part_distance(xcr,ycr,radii,MAT,True)
 print "The Contacts Measure, A = {}".format(A)
 print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
+pss.save_mesh_full(I_shape,XINT,YINT,MAT,J)
+
+
 timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
-np.savetxt('{}cppr_{}vfrlim_A{:1.3f}_{}.iSALE'.format(cppr,vfraclimit,A,timestr),ALL)
+#np.savetxt('{}cppr_{}vfrlim_A{:1.3f}_{}.iSALE'.format(cppr,vfraclimit,A,timestr),ALL)
 placed_part_area = np.array(placed_part_area)
 print "total particles placed: {}".format(J)
 vol_frac_calc = np.sum(placed_part_area)/(pss.meshx*pss.meshy)
@@ -184,5 +182,8 @@ else:
 
 plt.figure(3)
 plt.imshow(pss.mesh, cmap='Greys',  interpolation='nearest')
+for KK in range(pss.Ms):
+	plt.figure()
+	plt.imshow(pss.materials[KK,:,:], cmap='Greys',  interpolation='nearest')
 plt.show()
 
