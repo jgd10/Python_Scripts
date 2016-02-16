@@ -835,11 +835,11 @@ def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 			YI[K] = j
 			for mm in range(Ms):
 				FRAC[mm,K] = materials[mm,i,j]
-				OBJID[mm,K]= objects[mm,i,j]
+				OBJID[mm,K]= objects[mm,i,j]														# each particle number
 			K += 1
 	FRAC = check_FRACs(FRAC)
 	HEAD = '{},{}'.format(K,Ms)
-	ALL  = np.column_stack((XI,YI,FRAC.transpose(),OBJID.transpose()))
+	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
 	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
 	return
 
