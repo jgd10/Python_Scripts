@@ -7,9 +7,9 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .45
-X_cells    = 1000 
-Y_cells    = 1000 
+vol_frac   = .4
+X_cells    = 100 
+Y_cells    = 100 
 PR         = 0.
 cppr       = 10 
 vfraclimit = 0.1                                # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
@@ -184,6 +184,6 @@ plt.figure(3)
 plt.imshow(pss.mesh, cmap='Greys',  interpolation='nearest')
 for KK in range(pss.Ms):
 	plt.figure()
-	plt.imshow(pss.materials[KK,:,:], cmap='Greys',  interpolation='nearest')
+	plt.imshow(pss.objects[KK,:,:], cmap='Greys',  interpolation='nearest')
 plt.show()
 
