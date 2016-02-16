@@ -838,8 +838,9 @@ def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 				OBJID[mm,K]= objects[mm,i,j]
 			K += 1
 	FRAC = check_FRACs(FRAC)
+	HEAD = '{},{}'.format(K,Ms)
 	ALL  = np.column_stack((XI,YI,FRAC.transpose(),OBJID.transpose()))
-	np.savetxt(fname,ALL,fmt='%5.3f')
+	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
 	return
 
 def check_FRACs(FRAC):
