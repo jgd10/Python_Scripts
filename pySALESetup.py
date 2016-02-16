@@ -24,7 +24,7 @@ def generate_mesh(X,Y,CPPR,pr,VF,mat_no,e = 0.):
 	NB. Recently I have updated 'N' to now be the number of different particles that can be generated
 	and NOT N**2. 19-01-16
 	"""
-	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats
+	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects
 
 	Ms        = mat_no	 																				# M is the number of materials within the mesh
 	mats      = np.arange(Ms)+1.
@@ -38,6 +38,7 @@ def generate_mesh(X,Y,CPPR,pr,VF,mat_no,e = 0.):
 	vol_frac  = VF																						# Target fraction by volume of parts:void
 	mesh      = np.zeros((meshx,meshy))
 	materials = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
+	objects   = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
 	xh        = np.arange(meshx)																		# arrays of physical positions of cell BOUNDARIES (not centres)
 	yh        = np.arange(meshy)
 	Ns        = 2*(cppr_max)+2															    			# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
@@ -434,7 +435,7 @@ def insert_shape_into_mesh(shape,x0,y0):
 	area = np.sum(temp_shape)																			# Area is sum of all these points
 	return area
 
-def place_shape(shape,x0,y0,mat):
+def place_shape(shape,x0,y0,mat,obj):
 	"""
 	This function inserts the shape (passed as the array 'shape') into the
 	correct materials mesh at coordinate x0, y0.
@@ -476,7 +477,11 @@ def place_shape(shape,x0,y0,mat):
 		j_finl   = meshy
 	temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
 	materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
+	objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
+	objects_temp[objects_temp>0.]                = obj
+	objects[mat-1,i_edge:i_finl,j_edge:j_finl]   = objects_temp 
 	
+	return
 														
 
 def gen_coord_basic():																					
@@ -816,11 +821,12 @@ def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 	NB This function will remake the mesh.
 	"""
 	global mesh, mesh_Shps,meshx,meshy
-	FRAC = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
-	XI   = np.zeros((meshx*meshy))	
-	YI   = np.zeros((meshx*meshy))
+	FRAC  = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+	OBJID = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+	XI    = np.zeros((meshx*meshy))	
+	YI    = np.zeros((meshx*meshy))
 	for k in range(n):
-		place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k])
+		place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k],k)
 
 	K = 0
 	for i in range(meshx):
@@ -829,12 +835,30 @@ def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 			YI[K] = j
 			for mm in range(Ms):
 				FRAC[mm,K] = materials[mm,i,j]
+				OBJID[mm,K]= objects[mm,i,j]
 			K += 1
-	ALL = np.column_stack((XI,YI,FRAC.transpose()))
-	np.savetxt(fname,ALL)
+	FRAC = check_FRACs(FRAC)
+	ALL  = np.column_stack((XI,YI,FRAC.transpose(),OBJID.transpose()))
+	np.savetxt(fname,ALL,fmt='%5.3f')
 	return
 
+def check_FRACs(FRAC):
+	"""
+	This function checks all the volume fractions in each cell and deals with any occurrences where they add to more than one
+	by scaling down ALL fractions in that cell, such that it is only 100% full.
+
+	FRAC : Array containing the full fractions in each cell of each material
+	"""
+
+	global Ms,meshx,meshy
+
+	for i in range(meshx*meshy):
+		SUM = np.sum(FRAC[:,i])
+		if SUM > 1.:
+			FRAC[:,i] /= SUM
+		else:
+			pass
+	return FRAC
 
 
 
-# PLAN: REMAKE MESH A SECOND TIME UPON COMPLETION. But now store the index of each cell and the fraction in it in the arrays.
