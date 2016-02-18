@@ -7,12 +7,12 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .4
+vol_frac   = .6
 X_cells    = 100 
 Y_cells    = 100 
 PR         = 0.
-cppr       = 10 
-vfraclimit = 0.1                                # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+cppr       = 5 
+vfraclimit = .5                                # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
@@ -166,7 +166,7 @@ print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
-pss.save_mesh_full(I_shape,XINT,YINT,MAT,J)
+pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)
 
 
 timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
@@ -183,7 +183,8 @@ else:
 plt.figure(3)
 plt.imshow(pss.mesh, cmap='Greys',  interpolation='nearest')
 for KK in range(pss.Ms):
+	print np.amax(pss.materials[KK,:,:])
 	plt.figure()
-	plt.imshow(pss.objects[KK,:,:], cmap='Greys',  interpolation='nearest')
+	plt.imshow(pss.materials[KK,:,:], cmap='Greys',  interpolation='nearest')
 plt.show()
 
