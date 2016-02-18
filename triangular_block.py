@@ -37,7 +37,9 @@ pss.fill_above_line(r2,r3,mats[0],mixed=True)
 pss.fill_above_line(r3,r4,mats[0],mixed=True)
 
 pss.fill_plate(0.,300.,mats[1])
+MMMM = np.mean(pss.materials)
+pss.save_general_mesh()
 
 plt.figure()
-plt.imshow(pss.materials[mats[0]-1],cmap='Greys',interpolation='nearest')
+plt.imshow(MMMM,cmap='Greys',interpolation='nearest')
 plt.show()
