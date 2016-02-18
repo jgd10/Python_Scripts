@@ -843,6 +843,37 @@ def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
 	return
 
+def save_general_mesh(fname='meso_m.iSALE'):
+	"""
+	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
+	This compiles the integer indices of each cell, as well as the material in them and the fraction
+	of matter present. It saves all this as the filename specified by the user, with the default as 
+	meso_m.iSALE
+
+	This version of the function works for continuous and solid materials, such as a multiple-plate setup.
+	It does not need to remake the mesh as there is no particular matter present.
+
+	fname   : The filename to be used for the text file being used
+
+	returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
+	"""
+	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID
+	K = 0
+	XI    = np.zeros((meshx*meshy))	
+	YI    = np.zeros((meshx*meshy))
+	for i in range(meshx):
+		for j in range(meshy):
+			XI[K] = i
+			YI[K] = j
+			for mm in range(Ms):
+				FRAC[mm,K] = materials[mm,i,j]
+			K += 1
+	FRAC = check_FRACs(FRAC)
+	HEAD = '{},{}'.format(K,Ms)
+	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
+	return
+
 def check_FRACs(FRAC):
 	"""
 	This function checks all the volume fractions in each cell and deals with any occurrences where they add to more than one
@@ -870,6 +901,7 @@ def fill_plate(y1,y2,mat,invert=False):
 	assert y2>y1, 'ERROR: 2nd y value is less than the first, the function accepts them in ascending order' 
 	for j in range(meshx):
 		if j <= y2 and j >= y1:
+			materials[:,j,:]     = 0. 																# This ensures that plates override in the order they are placed.
 			materials[mat-1,j,:] = 1.
 			mesh[j,:]            = 1.
 	return
