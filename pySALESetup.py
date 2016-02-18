@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X,Y,CPPR,pr,VF,mat_no,e = 0.):
+def generate_mesh(X,Y,CPPR=10,pr=0.,VF=.5,mat_no=5,e = 0.):
 	"""
 	This function generates the global mesh that all particles will be inserted into.
 	Initially it reads in several parameters and renames them within the module. Then 
@@ -24,7 +24,7 @@ def generate_mesh(X,Y,CPPR,pr,VF,mat_no,e = 0.):
 	NB. Recently I have updated 'N' to now be the number of different particles that can be generated
 	and NOT N**2. 19-01-16
 	"""
-	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects
+	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects,FRAC,OBJID
 
 	Ms        = mat_no	 																				# M is the number of materials within the mesh
 	mats      = np.arange(Ms)+1.
@@ -47,6 +47,8 @@ def generate_mesh(X,Y,CPPR,pr,VF,mat_no,e = 0.):
 	mesh0     = np.zeros((Ns,Ns))																		# Generate mesh that is square and slightly larger than the max particle size
 																										# This will be the base for any shapes that are generated
 	mesh_Shps = np.zeros((N,Ns,Ns))																		# Generate an array of meshes of this size. of size N (Ns x Ns x N)
+	FRAC      = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+	OBJID     = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
 
 def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
 	"""
@@ -802,7 +804,7 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	
 	return A, B
 
-def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
+def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 	"""
 	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
 	This compiles the integer indices of each cell, as well as the material in them and the fraction
@@ -820,9 +822,7 @@ def save_mesh_full(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 
 	NB This function will remake the mesh.
 	"""
-	global mesh, mesh_Shps,meshx,meshy
-	FRAC  = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
-	OBJID = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID
 	XI    = np.zeros((meshx*meshy))	
 	YI    = np.zeros((meshx*meshy))
 	for k in range(n):
@@ -861,5 +861,86 @@ def check_FRACs(FRAC):
 			pass
 	return FRAC
 
+def fill_plate(y1,y2,mat,invert=False):
+	"""
+	This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
+	It fills all cells between y1 and y2.
+	"""
+	global meshx,meshy,materials,mesh
+	assert y2>y1, 'ERROR: 2nd y value is less than the first, the function accepts them in ascending order' 
+	for j in range(meshx):
+		if j <= y2 and j >= y1:
+			materials[mat-1,j,:] = 1.
+			mesh[j,:]            = 1.
+	return
 
-
+def fill_above_line(r1,r2,mat,invert=False,mixed=False):
+	"""
+	This function takes two points and fills all cells above the line drawn between them.
+	If invert is True then it will fill all cells below the line. if mixed is True, then it
+	will also partially fill cells where necessary.
+	
+	x1, y1 : x and y coords of point 1
+	x2, y2 : x and y coords of point 2
+	invert : logical to indicate if inversion necessary
+	mixed  : logical to indicate if partially filled cells necessary
+	"""
+	
+	global meshx,meshy,materials,mesh
+	AREA = 0.
+	if mixed == True:																				# If there are to be mixed cells, then set MIX to 1.
+		MIX = 1.
+	else:
+		MIX = 0.
+	x2 = r2[0]
+	x1 = r1[0]
+	y2 = r2[1]
+	y1 = r1[1]
+	assert x1!=x2,'ERROR: x2 is equal to x1, this is a vertical line, use fill_left or fill_right'
+	M = (y2-y1)/(x2-x1)																				# Calculate the equation of the line between x1,y1 and x2,y2
+	C = y1 - M*x1
+	for i in range(meshx):
+		for j in range(meshy):
+			xc = 0.5*(i + (i+1))																	
+			yc = 0.5*(j + (j+1))						
+			A = (yc - C)/M		
+			#A = M*xc + C
+			if (j+.5) < y2 and (j+.5) > y1:
+				if invert == False:																		# If the fill is not inverted do below
+					if (xc-A) < -1.*np.sqrt(2.)*MIX:													# If the cell centre falls under this line then fill fully
+				   		mesh[i,j]            = 1.0														# If MIX=0. then this will do it for all cells
+						materials[mat-1,i,j] = 1.0
+				   		AREA += 1																		# If MIX=1. then the ones right next to the line will be mixed
+					elif abs(xc-A) <= np.sqrt(2.) and mixed == True:									# If mixed cells wanted and the cell is within the necessary range
+						xx = np.linspace(i,i+1,11)														# Split into 10x10 grid and fill, depending on these values.
+						yy = np.linspace(j,j+1,11)						
+						for I in range(10):
+							for J in range(10):							
+								xxc = 0.5*(xx[I] + xx[J+1])		
+								yyc = 0.5*(yy[J] + yy[J+1])
+								#A = M*xxc + C							
+								A = (yyc-C)/M
+								if (xxc-A) < 0.:				
+									mesh[i,j]            += (.1**2.)				
+									materials[mat-1,i,j] += (.1**2.)
+									AREA                 += (.1**2.)			
+				elif invert == True:
+					if (xc-A) > np.sqrt(2.)*MIX:				
+				   		mesh[i,j]            = 1.0														# If MIX=0. then this will do it for all cells
+						materials[mat-1,i,j] = 1.0
+					elif abs(xc-A) <= np.sqrt(2) and mixed == True:					
+						xx = np.linspace(i,i+1,11)						
+						yy = np.linspace(j,j+1,11)						
+						for I in range(10):
+							for J in range(10):							
+								xxc = 0.5*(xx[I] + xx[J+1])		
+								yyc = 0.5*(yy[J] + yy[J+1])
+								#A = M*xxc + C							
+								A = (yyc-C)/M
+								if (xxc-A) > 0.:				
+									mesh[i,j]            += (.1**2.)				
+									materials[mat-1,i,j] += (.1**2.)
+									AREA                 += (.1**2.)			
+			else:
+				pass
+	return
