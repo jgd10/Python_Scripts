@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import time
 
 
-X_cells    = 2000 
+X_cells    = 1200 
 Y_cells    = 3000 
-x_length   = 200.e-6
+x_length   = 120.e-6
 y_length   = 300.e-6
 GRIDSPC    = x_length/X_cells
 mat_no     = 3
@@ -36,10 +36,9 @@ pss.fill_above_line(r1,r2,mats[0],mixed=True)
 pss.fill_above_line(r2,r3,mats[0],mixed=True)
 pss.fill_above_line(r3,r4,mats[0],mixed=True)
 
-pss.fill_plate(0.,300.,mats[1])
-MMMM = np.mean(pss.materials)
+#pss.fill_plate(0.,300.,mats[1])
 pss.save_general_mesh()
 
 plt.figure()
-plt.imshow(MMMM,cmap='Greys',interpolation='nearest')
+plt.imshow(pss.mesh,cmap='Greys',interpolation='nearest')
 plt.show()
