@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X,Y,CPPR=10,pr=0.,VF=.5,mat_no=5,e = 0.):
+def generate_mesh(X,Y,mat_no,CPPR=10,pr=0.,VF=.5,e = 0.):
 	"""
 	This function generates the global mesh that all particles will be inserted into.
 	Initially it reads in several parameters and renames them within the module. Then 
@@ -822,13 +822,14 @@ def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
 
 	NB This function will remake the mesh.
 	"""
-	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID
+	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
 	XI    = np.zeros((meshx*meshy))	
 	YI    = np.zeros((meshx*meshy))
 	for k in range(n):
 		place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k],k)
 
 	K = 0
+	materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
 	for i in range(meshx):
 		for j in range(meshy):
 			XI[K] = i
@@ -857,10 +858,11 @@ def save_general_mesh(fname='meso_m.iSALE'):
 
 	returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
 	"""
-	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID
+	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
 	K = 0
 	XI    = np.zeros((meshx*meshy))	
 	YI    = np.zeros((meshx*meshy))
+	materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
 	for i in range(meshx):
 		for j in range(meshy):
 			XI[K] = i
@@ -871,6 +873,11 @@ def save_general_mesh(fname='meso_m.iSALE'):
 	FRAC = check_FRACs(FRAC)
 	HEAD = '{},{}'.format(K,Ms)
 	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    
+	#fig, ax = plt.subplots()
+	#cax = ax.imshow(materials[0,:,:],cmap='Greys',interpolation='nearest',vmin=0,vmax=1)
+	#cbar = fig.colorbar(cax, orientation='horizontal')
+	#plt.show()
 	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
 	return
 
