@@ -884,6 +884,7 @@ def save_general_mesh(fname='meso_m.iSALE'):
 def populate_from_bmp(A):
 	global materials,Ms,FRAC
 	fname = 'meso_m.iSALE'
+	A = A[:,::-1]
 	ny, nx = np.shape(A)
 	generate_mesh(nx,ny,1)
 	XI    = np.zeros((nx*ny))	
@@ -893,14 +894,14 @@ def populate_from_bmp(A):
 		for j in range(ny):
 			XI[K] = i
 			YI[K] = j
-			FRAC[0,K] = A[j,i]
+			FRAC[0,K] = 1. - A[j,i]
 			K += 1
 		
 	HEAD = '{},{}'.format(K,Ms)
 	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
     
 	fig, ax = plt.subplots()
-	cax = ax.imshow(A,cmap='Greys',interpolation='nearest',vmin=0,vmax=1)
+	cax = ax.imshow(1.-A,cmap='Greys',interpolation='nearest',vmin=0,vmax=1)
 	cbar = fig.colorbar(cax, orientation='horizontal')
 	plt.show()
 	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
