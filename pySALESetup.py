@@ -884,7 +884,6 @@ def save_general_mesh(fname='meso_m.iSALE'):
 def populate_from_bmp(A):
 	global materials,Ms,FRAC
 	fname = 'meso_m.iSALE'
-	A = A[::-1,:]
 	ny, nx = np.shape(A)
 	generate_mesh(nx,ny,1)
 	XI    = np.zeros((nx*ny))	
