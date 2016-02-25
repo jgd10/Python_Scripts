@@ -1009,3 +1009,93 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
 			else:
 				pass
 	return
+
+def fill_arbitrary_shape(X,Y,mat):						
+	"""
+	Function to fill an arbitrary shape in the mesh based on arrays of vertices.
+	This version does NOT partially fill cells.
+	"""
+	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
+	N = np.size(X)
+	R     = np.zeros((2,N))																# Array for the coords of the vertices
+	R[0,:] = X															# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y															# each one in order, will result in no crossed lines.
+																			# Convert into cartesian coords and store in R
+	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
+	qy = 0.																		# All dimensions are in reference to the central coordinates.
+	for j in range(meshy):																# Iterate through all the x- and y-coords
+		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
+			xc = 0.5*(i + (i+1))													# Convert current coord to position relative to (x0,y0) 
+			yc = 0.5*(j + (j+1))													# Everything is now in indices, with (x0,y0)
+			sx = xc - qx															# s = vector difference between current coord and ref coord
+			sy = yc - qy		
+			intersection = 0																# Initialise no. intersections as 0
+			for l in range(N-1):															# cycle through each edge, bar the last
+				rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+				ry = R[1,l+1] - R[1,l]
+				RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+				if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+					t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
+					u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
+					if t<=1. and t>=0. and u<=1. and u>=0.:
+						intersection = intersection + 1
+			rx = R[0,0] - R[0,N-1]															# Do the last edge. Done separately to avoid needing a circular 'for' loop
+			ry = R[1,0] - R[1,N-1]
+			if (rx*sy-ry*sy)!=0.:
+				RxS = (rx*sy-ry*sx)
+				t = ((qx-R[0,N-1])*sy - (qy-R[1,N-1])*sx)/RxS
+				u = ((qx-R[0,N-1])*ry - (qy-R[1,N-1])*rx)/RxS
+				if t<=1. and t>=0. and u<=1. and u>=0.:
+					intersection = intersection + 1
+			if (intersection%2!=0. and intersection > 0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+				mesh[i,j]         = 1.0
+				materials[mat-1,i,j] = 1.0
+
+	return
+
+def fill_arbitrary_shape_p(X,Y,mat):						
+	"""
+	Function to fill an arbitrary shape in the mesh based on arrays of vertices.
+	This version DOES partially fill cells.
+	"""
+	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
+	N = np.size(X)
+	R     = np.zeros((2,N))																# Array for the coords of the vertices
+	R[0,:] = X															# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y															# each one in order, will result in no crossed lines.
+																			# Convert into cartesian coords and store in R
+	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
+	qy = 0.																		# All dimensions are in reference to the central coordinates.
+	for j in range(meshy):																# Iterate through all the x- and y-coords
+		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
+			xx = np.linspace(i,i+1,11)						
+			yy = np.linspace(j,j+1,11)						
+			for I in range(10):
+				for J in range(10):							
+					xc = 0.5*(xx[I] + xx[J+1])		
+					yc = 0.5*(yy[J] + yy[J+1])
+					sx = xc - qx															# s = vector difference between current coord and ref coord
+					sy = yc - qy		
+					intersection = 0																# Initialise no. intersections as 0
+					for l in range(N-1):															# cycle through each edge, bar the last
+						rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+						ry = R[1,l+1] - R[1,l]
+						RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+						if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+							t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
+							u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
+							if t<=1. and t>=0. and u<=1. and u>=0.:
+								intersection = intersection + 1
+					rx = R[0,0] - R[0,N-1]															# Do the last edge. Done separately to avoid needing a circular 'for' loop
+					ry = R[1,0] - R[1,N-1]
+					if (rx*sy-ry*sy)!=0.:
+						RxS = (rx*sy-ry*sx)
+						t = ((qx-R[0,N-1])*sy - (qy-R[1,N-1])*sx)/RxS
+						u = ((qx-R[0,N-1])*ry - (qy-R[1,N-1])*rx)/RxS
+						if t<=1. and t>=0. and u<=1. and u>=0.:
+							intersection = intersection + 1
+					if (intersection%2!=0. and intersection > 0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+						mesh[i,j]            += (.1**2.)				
+						materials[mat-1,i,j] += (.1**2.)
+
+	return
