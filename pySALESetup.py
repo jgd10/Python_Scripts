@@ -201,30 +201,30 @@ def gen_polygon(sides,radii):
 
 	The area of the shape and it's mesh0 are returned.
 	"""
-	global mesh0, cppr_min, cppr_max, n_min, n_max, Ns															# Only the angles used are now randomly selected.
+	global mesh0, cppr_min, cppr_max, n_min, n_max, Ns													# Only the angles used are now randomly selected.
 	AREA  = 0.
 	n     = sides
-	R     = np.zeros((2,n))																			# Array for the coords of the vertices
-	delr  = (cppr_max-cppr_min)																		# Difference between min and max radii
-	mesh0[:] = 0.																				# This is necessary to ensure the mesh is empty before use.
-	I   = np.arange(n)																			# array of vertex numbers
+	R     = np.zeros((2,n))																				# Array for the coords of the vertices
+	delr  = (cppr_max-cppr_min)																			# Difference between min and max radii
+	mesh0[:] = 0.																						# This is necessary to ensure the mesh is empty before use.
+	I   = np.arange(n)																					# array of vertex numbers
 	ang = np.random.rand(n)																				
-	phi = np.pi/2. - ang*np.pi*2./n - I*np.pi*2./n																# Generate 'n' random angles 
-	rho = radii				    																# Ensure each vertex is within an arc, 1/nth of a circle
-	R[0,:] = rho*np.cos(phi)																		# Each vertex will also be successive, such that drawing a line between
-	R[1,:] = rho*np.sin(phi)																		# each one in order, will result in no crossed lines.
-																						# Convert into cartesian coords and store in R
-	qx = 0.																					# Make the reference point (q) zero, i.e. the centre of the shape
-	qy = 0.																					# All dimensions are in reference to the central coordinates.
+	phi = np.pi/2. - ang*np.pi*2./n - I*np.pi*2./n														# Generate 'n' random angles 
+	rho = radii				    																		# Ensure each vertex is within an arc, 1/nth of a circle
+	R[0,:] = rho*np.cos(phi)																			# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = rho*np.sin(phi)																			# each one in order, will result in no crossed lines.
+																										# Convert into cartesian coords and store in R
+	qx = 0.																								# Make the reference point (q) zero, i.e. the centre of the shape
+	qy = 0.																								# All dimensions are in reference to the central coordinates.
 	x0 = cppr_max + 1.  
-	y0 = cppr_max + 1.																			# Define x0, y0 to be the centre of the mesh
-	for j in range(Ns-1):																			# Iterate through all the x- and y-coords
-		for i in range(Ns-1):																		# N-1 because we want the centres of each cell, and there are only N-1 of these!
-			xc = 0.5*(i + (i+1)) - x0																# Convert current coord to position relative to (x0,y0) 
-			yc = 0.5*(j + (j+1)) - y0																# Everything is now in indices, with (x0,y0)
+	y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
+	for j in range(Ns-1):																				# Iterate through all the x- and y-coords
+		for i in range(Ns-1):																			# N-1 because we want the centres of each cell, and there are only N-1 of these!
+			xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
+			yc = 0.5*(j + (j+1)) - y0																	# Everything is now in indices, with (x0,y0)
 
-			sx = xc - qx																		# s = vector difference between current coord and ref coord
-			sy = yc - qy		
+			sx = xc - qx		         																# s = vector difference between current coord and ref coord
+			sy = yc - qy		   
 			intersection = 0																			# Initialise no. intersections as 0
 			for l in range(n-1):																		# cycle through each edge, bar the last
 				rx = R[0,l+1] - R[0,l]																	# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
@@ -1014,19 +1014,22 @@ def fill_arbitrary_shape(X,Y,mat):
 	"""
 	Function to fill an arbitrary shape in the mesh based on arrays of vertices.
 	This version does NOT partially fill cells.
+	NB for this to work the coordinates of the vertices MUST be relative to the centre of the object.
+
+	X, Y      : Vertices in cells
 	"""
 	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
-	N = np.size(X)
-	R     = np.zeros((2,N))																# Array for the coords of the vertices
-	R[0,:] = X															# Each vertex will also be successive, such that drawing a line between
-	R[1,:] = Y															# each one in order, will result in no crossed lines.
-																			# Convert into cartesian coords and store in R
+	N      = np.size(X)
+	R      = np.zeros((2,N))																# Array for the coords of the vertices
+	x0,y0 = find_centroid(X,Y)
+	R[0,:] = X - x0															# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y - y0														# each one in order, will result in no crossed lines.
 	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
-	qy = 0.																		# All dimensions are in reference to the central coordinates.
+	qy = 0.																	# All dimensions are in reference to the central coordinates.
 	for j in range(meshy):																# Iterate through all the x- and y-coords
 		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
-			xc = 0.5*(i + (i+1))													# Convert current coord to position relative to (x0,y0) 
-			yc = 0.5*(j + (j+1))													# Everything is now in indices, with (x0,y0)
+			xc = 0.5*(i+(i+1))-x0												# Convert current coord to position relative to (x0,y0) 
+			yc = 0.5*(j+(j+1))-y0													# Everything is now in indices, with (x0,y0)
 			sx = xc - qx															# s = vector difference between current coord and ref coord
 			sy = yc - qy		
 			intersection = 0																# Initialise no. intersections as 0
@@ -1047,8 +1050,8 @@ def fill_arbitrary_shape(X,Y,mat):
 				u = ((qx-R[0,N-1])*ry - (qy-R[1,N-1])*rx)/RxS
 				if t<=1. and t>=0. and u<=1. and u>=0.:
 					intersection = intersection + 1
-			if (intersection%2!=0. and intersection > 0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
-				mesh[i,j]         = 1.0
+			if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+				mesh[i,j]            = 1.0
 				materials[mat-1,i,j] = 1.0
 
 	return
@@ -1059,43 +1062,78 @@ def fill_arbitrary_shape_p(X,Y,mat):
 	This version DOES partially fill cells.
 	"""
 	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
-	N = np.size(X)
-	R     = np.zeros((2,N))																# Array for the coords of the vertices
-	R[0,:] = X															# Each vertex will also be successive, such that drawing a line between
-	R[1,:] = Y															# each one in order, will result in no crossed lines.
+	x0,y0  = find_centroid(X,Y)
+	N      = np.size(X)
+	X      = np.append(X,X[0])
+	Y      = np.append(Y,Y[0])
+	R      = np.zeros((2,N+1))																# Array for the coords of the vertices
+	R[0,:] = X - x0															# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y - y0														# each one in order, will result in no crossed lines.
 																			# Convert into cartesian coords and store in R
 	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
 	qy = 0.																		# All dimensions are in reference to the central coordinates.
 	for j in range(meshy):																# Iterate through all the x- and y-coords
+		print j
 		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
-			xx = np.linspace(i,i+1,11)						
-			yy = np.linspace(j,j+1,11)						
-			for I in range(10):
-				for J in range(10):							
-					xc = 0.5*(xx[I] + xx[J+1])		
-					yc = 0.5*(yy[J] + yy[J+1])
-					sx = xc - qx															# s = vector difference between current coord and ref coord
-					sy = yc - qy		
-					intersection = 0																# Initialise no. intersections as 0
-					for l in range(N-1):															# cycle through each edge, bar the last
-						rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
-						ry = R[1,l+1] - R[1,l]
-						RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
-						if RxS!=0.:																	# If r x s  = 0 then lines are parallel
-							t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
-							u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
-							if t<=1. and t>=0. and u<=1. and u>=0.:
-								intersection = intersection + 1
-					rx = R[0,0] - R[0,N-1]															# Do the last edge. Done separately to avoid needing a circular 'for' loop
-					ry = R[1,0] - R[1,N-1]
-					if (rx*sy-ry*sy)!=0.:
-						RxS = (rx*sy-ry*sx)
-						t = ((qx-R[0,N-1])*sy - (qy-R[1,N-1])*sx)/RxS
-						u = ((qx-R[0,N-1])*ry - (qy-R[1,N-1])*rx)/RxS
-						if t<=1. and t>=0. and u<=1. and u>=0.:
-							intersection = intersection + 1
-					if (intersection%2!=0. and intersection > 0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
-						mesh[i,j]            += (.1**2.)				
-						materials[mat-1,i,j] += (.1**2.)
+			xc = 0.5*(i + i+1) - x0		
+			yc = 0.5*(j + j+1) - y0
+			sx = xc - qx															# s = vector difference between current coord and ref coord
+			sy = yc - qy		
+			intersection = 0																# Initialise no. intersections as 0
+			for l in range(N):															# cycle through each edge, bar the last
+				rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+				ry = R[1,l+1] - R[1,l]
+				RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+				if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+					t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
+					u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
+					if t<=1. and t>=0. and u<=1. and u>=0.:
+						intersection = intersection + 1
+			if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+				
+				xx = np.linspace(i,i+1,11)						
+				yy = np.linspace(j,j+1,11)						
+				for I in range(10):
+					for J in range(10):							
+						xc = 0.5*(xx[I] + xx[I+1]) - x0		
+						yc = 0.5*(yy[J] + yy[J+1]) - y0
+						sx = xc - qx															# s = vector difference between current coord and ref coord
+						sy = yc - qy		
+						intersection = 0																# Initialise no. intersections as 0
+						for l in range(N):															# cycle through each edge, bar the last
+							rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+							ry = R[1,l+1] - R[1,l]
+							RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+							if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+								t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
+								u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
+								if t<=1. and t>=0. and u<=1. and u>=0.:
+									intersection = intersection + 1
+						if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+							mesh[i,j]            += (.1**2.)				
+							materials[mat-1,i,j] += (.1**2.)
 
 	return
+
+def find_centroid(x,y):
+	"""
+	Simple function to return the centroid coordinate of an arbitrary, non-intersecting polygon.
+	with n vertices. see https://en.wikipedia.org/wiki/Centroid#Locating_the_centroid for further
+	information.
+	"""
+	x = np.append(x,x[0])
+	y = np.append(y,y[0])
+
+	n = np.size(x)
+	A  = 0
+	Cx = 0
+	Cy = 0
+	for i in range(n-1):
+		A += (x[i]*y[i+1]-x[i+1]*y[i])*.5
+	for j in range(n-1):
+		Cx += (x[j]+x[j+1])*(x[j]*y[j+1]-x[j+1]*y[j])
+		Cy += (y[j]+y[j+1])*(x[j]*y[j+1]-x[j+1]*y[j])
+	
+	Cx /= (6.*A)
+	Cy /= (6.*A)
+	return Cx,Cy
