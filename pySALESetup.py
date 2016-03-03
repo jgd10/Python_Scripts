@@ -155,8 +155,8 @@ def gen_circle_p(r_):
 	"""
 	global mesh0, Ns																			# mesh0 is Ns x Ns in size
 	CL = 1.																					# This is mesh0 so cell length is simply '1.'
-	x0 = cppr_max + 1.	  																		# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-	y0 = cppr_max + 1.																			# Define x0, y0 to be the centre of the mesh
+	x0 = float(Ns)/2.	  																		# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+	y0 = float(Ns)/2.																			# Define x0, y0 to be the centre of the mesh
 	AREA  = 0.																				# Initialise AREA as 0.
 	mesh0[:] = 0.																				# This is necessary to ensure the mesh is empty before use.
 	for j in range(Ns):																			# Iterate through all the x- and y-coords
@@ -164,25 +164,25 @@ def gen_circle_p(r_):
 			xc = 0.5*(i + (i+1)) - x0																# Convert current coord (centre of cell) to position relative to (x0,y0) 
 			yc = 0.5*(j + (j+1)) - y0																# Everything is now in cartesian coords relative to the mesh centre
 			r = np.sqrt((xc)**2. + (yc)**2.)															# Find the radial distance from current coord to (x0,y0)_
-			if r<=(r_-1):																		# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
+			if r<=(r_-np.sqrt(2.)):																		# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
 		   		mesh0[i,j] = 1.0																# Fill cell
 		   		AREA += 1																	# Increment area
-			elif abs(r-r_)<=np.sqrt(2):																# BUT if the cell centre is with root(2) of the circle edge, then partially fill
-				xx = np.linspace(i,i+1,11)															# Create 2 arrays of 11 elements each and with divisions of 0.1
-				yy = np.linspace(j,j+1,11)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
-				for I in range(10):
-					for J in range(10):															# Iterate through these
+			elif abs(r-r_)<np.sqrt(2.):																# BUT if the cell centre is with root(2) of the circle edge, then partially fill
+				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
+				for I in range(10-1):
+					for J in range(10-1):															# Iterate through these
 						xxc = 0.5*(xx[I] + xx[J+1]) - x0												# Change their coordinates as before
 						yyc = 0.5*(yy[J] + yy[J+1]) - y0
 						r = np.sqrt((xxc)**2. + (yyc)**2. )												# Find the radial distance from current mini coord to (x0,y0)
 						if r <= r_:															# If this is less than r_ then the mini coord is in the circle.
 							mesh0[i,j] += (.1**2.)													# Fill cell by 0.1**2 (the area of one mini-cell)
 							AREA += (.1**2.)													# Increment area by the same amount
-	"""
+    """	
 	plt.figure()
-	plt.imshow(mesh0,cmap='Greys')
+	plt.imshow(mesh0,cmap='Greys',interpolation='nearest')
 	plt.show()
-	"""
+    """
 	return mesh0, AREA
 
 def gen_polygon(sides,radii):						
@@ -1091,10 +1091,10 @@ def fill_arbitrary_shape_p(X,Y,mat):
 						intersection = intersection + 1
 			if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
 				
-				xx = np.linspace(i,i+1,11)						
-				yy = np.linspace(j,j+1,11)						
-				for I in range(10):
-					for J in range(10):							
+				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
+				for I in range(10-1):
+					for J in range(10-1):							
 						xc = 0.5*(xx[I] + xx[I+1]) - x0		
 						yc = 0.5*(yy[J] + yy[J+1]) - y0
 						sx = xc - qx															# s = vector difference between current coord and ref coord
