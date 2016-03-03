@@ -18,7 +18,7 @@ y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
 mat_no     = 5
 
-pss.generate_mesh(X_cells,Y_cells,cppr,PR,vol_frac,mat_no)
+pss.generate_mesh(X_cells,Y_cells,mat_no,cppr,PR,vol_frac,)
 mats = pss.mats
 
 """ #################################################################################### """
@@ -42,6 +42,7 @@ n = pss.N                                 # Particles can be placed MORE than on
 part_area        = np.zeros((n))
 part_radii = []
 cppr_range = pss.cppr_max - pss.cppr_min
+print pss.cppr_min,pss.cppr_max
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
     r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
     pss.mesh_Shps[i,:,:],part_area[i] = pss.gen_circle_p(r)
