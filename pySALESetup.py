@@ -178,12 +178,12 @@ def gen_circle_p(r_):
 						if r <= r_:															# If this is less than r_ then the mini coord is in the circle.
 							mesh0[i,j] += (.1**2.)													# Fill cell by 0.1**2 (the area of one mini-cell)
 							AREA += (.1**2.)													# Increment area by the same amount
-    """	
+	"""	
 	plt.figure()
 	plt.imshow(mesh0,cmap='Greys',interpolation='nearest')
 	plt.show()
-    """
-	return mesh0, AREA
+	"""
+return mesh0, AREA
 
 def gen_polygon(sides,radii):						
 	"""
