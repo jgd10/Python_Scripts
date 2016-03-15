@@ -804,45 +804,58 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	
 	return A, B
 
+def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    """
+    Saves particle placement information in a meso.iSALE file in format:
+    MATERIAL : X0 : Y0 : RADIUS
+    This can be read by iSALE. NB X,Y and R are in physical units
+    """
+    fname += '_A-{:3.4f}.iSALE'.format(A)
+    
+    ALL  = np.column_stack((MATS,X,Y,R))                                                
+    np.savetxt(fname,ALL,comments='')
+    return
+
 def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
-	"""
-	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
-	This compiles the integer indices of each cell, as well as the material in them and the fraction
-	of matter present. It saves all this as the filename specified by the user, with the default as 
-	meso_m.iSALE
-
-	fname   : The filename to be used for the text file being used
-	SHAPENO : The indexes of each shape within mesh_Shps
-	X       : The xcoord of the shape centre (in cells)
-	Y       : The ycoord of the shape centre (in cells)
-	MATS    : The array of each corresponding material number to each particle
-	n       : The total number of particles
-
-	returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
-
-	NB This function will remake the mesh.
-	"""
-	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
-	XI    = np.zeros((meshx*meshy))	
-	YI    = np.zeros((meshx*meshy))
-	for k in range(n):
-		place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k],k)
-
-	K = 0
-	materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
-	for i in range(meshx):
-		for j in range(meshy):
-			XI[K] = i
-			YI[K] = j
-			for mm in range(Ms):
-				FRAC[mm,K] = materials[mm,i,j]
-				OBJID[mm,K]= objects[mm,i,j]														# each particle number
-			K += 1
-	FRAC = check_FRACs(FRAC)
-	HEAD = '{},{}'.format(K,Ms)
-	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
-	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
-	return
+    """
+    A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
+    This compiles the integer indices of each cell, as well as the material in them and the fraction
+    of matter present. It saves all this as the filename specified by the user, with the default as 
+    meso_m.iSALE
+    
+    fname   : The filename to be used for the text file being used
+    SHAPENO : The indexes of each shape within mesh_Shps
+    X       : The xcoord of the shape centre (in cells)
+    Y       : The ycoord of the shape centre (in cells)
+    MATS    : The array of each corresponding material number to each particle
+    n       : The total number of particles
+    
+    returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
+    
+    NB This function will remake the mesh.
+    """
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    XI    = np.zeros((meshx*meshy))	
+    YI    = np.zeros((meshx*meshy))
+    for k in range(n):
+    	place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k],k)
+    
+    K = 0
+    materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
+    for i in range(meshx):
+    	for j in range(meshy):
+    		XI[K] = i
+    		YI[K] = j
+    		for mm in range(Ms):
+    			FRAC[mm,K] = materials[mm,i,j]
+    			OBJID[mm,K]= objects[mm,i,j]														# each particle number
+    		K += 1
+    FRAC = check_FRACs(FRAC)
+    HEAD = '{},{}'.format(K,Ms)
+    ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
+    return
 
 def save_general_mesh(fname='meso_m.iSALE'):
 	"""
