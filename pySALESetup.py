@@ -164,16 +164,16 @@ def gen_circle_p(r_):
 			xc = 0.5*(i + (i+1)) - x0																# Convert current coord (centre of cell) to position relative to (x0,y0) 
 			yc = 0.5*(j + (j+1)) - y0																# Everything is now in cartesian coords relative to the mesh centre
 			r = np.sqrt((xc)**2. + (yc)**2.)															# Find the radial distance from current coord to (x0,y0)_
-			if r<=(r_-np.sqrt(2.)):																		# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
+			if r<=(r_-2.):																		# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
 		   		mesh0[i,j] = 1.0																# Fill cell
 		   		AREA += 1																	# Increment area
-			elif abs(r-r_)<np.sqrt(2.):																# BUT if the cell centre is with root(2) of the circle edge, then partially fill
+			elif abs(r-r_)<2.:																# BUT if the cell centre is with root(2) of the circle edge, then partially fill
 				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
 				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
-				for I in range(10-1):
-					for J in range(10-1):															# Iterate through these
-						xxc = 0.5*(xx[I] + xx[J+1]) - x0												# Change their coordinates as before
-						yyc = 0.5*(yy[J] + yy[J+1]) - y0
+				for I in range(10):
+					for J in range(10):															# Iterate through these
+						xxc = 0.5+xx[I] - x0												# Change their coordinates as before
+						yyc = 0.5+yy[J] - y0
 						r = np.sqrt((xxc)**2. + (yyc)**2. )												# Find the radial distance from current mini coord to (x0,y0)
 						if r <= r_:															# If this is less than r_ then the mini coord is in the circle.
 							mesh0[i,j] += (.1**2.)													# Fill cell by 0.1**2 (the area of one mini-cell)
@@ -1073,7 +1073,7 @@ def fill_arbitrary_shape_p(X,Y,mat):
 	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
 	qy = 0.																		# All dimensions are in reference to the central coordinates.
 	for j in range(meshy):																# Iterate through all the x- and y-coords
-		print j
+		if (j/meshy)%10.<=.001: print 100.*j/meshy,"% done"
 		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
 			xc = 0.5*(i + i+1) - x0		
 			yc = 0.5*(j + j+1) - y0
@@ -1089,14 +1089,13 @@ def fill_arbitrary_shape_p(X,Y,mat):
 					u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
 					if t<=1. and t>=0. and u<=1. and u>=0.:
 						intersection = intersection + 1
-			if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
-				
+			if (intersection%2==0.):										# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
 				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
 				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
-				for I in range(10-1):
-					for J in range(10-1):							
-						xc = 0.5*(xx[I] + xx[I+1]) - x0		
-						yc = 0.5*(yy[J] + yy[J+1]) - y0
+				for I in range(10):
+					for J in range(10):							
+						xc = 0.5+xx[I] - x0		
+						yc = 0.5+yy[J] - y0
 						sx = xc - qx															# s = vector difference between current coord and ref coord
 						sy = yc - qy		
 						intersection = 0																# Initialise no. intersections as 0
@@ -1137,3 +1136,73 @@ def find_centroid(x,y):
 	Cx /= (6.*A)
 	Cy /= (6.*A)
 	return Cx,Cy
+
+def fill_arbitrary_shape_P(X,Y,mat):						
+	"""
+	Function to fill an arbitrary shape in the mesh based on arrays of vertices.
+	This version DOES partially fill cells.
+	"""
+	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
+	x0,y0  = find_centroid(X,Y)
+	N      = np.size(X)
+	X      = np.append(X,X[0])
+	Y      = np.append(Y,Y[0])
+	R      = np.zeros((2,N+1))																# Array for the coords of the vertices
+	R[0,:] = X - x0															# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y - y0														# each one in order, will result in no crossed lines.
+																			# Convert into cartesian coords and store in R
+	for j in range(meshy):																# Iterate through all the x- and y-coords
+		if (j/meshy)%10.<=.001: print 100.*j/meshy,"% done"
+		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
+			sx  = np.array([i,i+1,i,i+1]) - x0		
+			sy  = np.array([j,j,j+1,j+1]) - y0		
+			intersection = 0																# Initialise no. intersections as 0
+			cross = 0
+			for l in range(N):															# cycle through each edge, bar the last
+				rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+				ry = R[1,l+1] - R[1,l]
+				RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+				kk = 0
+				nodes = 0
+				for item in RxS:
+					if item != 0: 
+						t = ((0.-R[0,l])*sy[kk] - (0.-R[1,l])*sx[kk])/item
+						u = ((0.-R[0,l])*ry - (0.-R[1,l])*rx)/item	
+						if t<=1. and t>=0. and u<=1. and u>=0.:
+							nodes += 1
+					kk += 1
+				if nodes == 4.: 
+					intersection += 1
+				elif nodes > 0.: 
+					cross += 1
+				else:
+					pass
+			if intersection % 2. == 0.:
+				mesh[i,j] 			 = 1.0
+				materials[mat-1,i,j] = 1.0
+			elif cross > 0.:										# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
+				for I in range(10):
+					for J in range(10):							
+						xc = 0.5+xx[I] - x0		
+						yc = 0.5+yy[J] - y0
+						sx = xc 															# s = vector difference between current coord and ref coord
+						sy = yc 		
+						intersection = 0																# Initialise no. intersections as 0
+						for l in range(N):															# cycle through each edge, bar the last
+							rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+							ry = R[1,l+1] - R[1,l]
+							RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+							if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+								t = ((0.-R[0,l])*sy - (0.-R[1,l])*sx)/RxS
+								u = ((0.-R[0,l])*ry - (0.-R[1,l])*rx)/RxS	
+								if t<=1. and t>=0. and u<=1. and u>=0.:
+									intersection = intersection + 1
+						if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+							mesh[i,j]            += (.1**2.)				
+							materials[mat-1,i,j] += (.1**2.)
+			else: 
+				pass
+
+	return
