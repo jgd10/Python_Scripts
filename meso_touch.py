@@ -7,18 +7,18 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .6
-X_cells    = 100 
-Y_cells    = 100 
+vol_frac   = .55
+X_cells    = 500 
+Y_cells    = 500 
 PR         = 0.
-cppr       = 5 
-vfraclimit = .5                                # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+cppr       = 8 
+vfraclimit = .495                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
 mat_no     = 5
 
-pss.generate_mesh(X_cells,Y_cells,cppr,PR,vol_frac,mat_no)
+pss.generate_mesh(X_cells,Y_cells,mat_no,cppr,PR,vol_frac)
 mats = pss.mats
 
 """ #################################################################################### """
@@ -44,7 +44,7 @@ part_radii = []
 cppr_range = pss.cppr_max - pss.cppr_min
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
     r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
-    pss.mesh_Shps[i,:,:],part_area[i] = pss.gen_circle_p(r)
+    pss.mesh_Shps[i,:,:],part_area[i] = pss.gen_circle(r)
     part_radii.append(r)
 
 
@@ -167,6 +167,9 @@ print 'Total contacts between same materials = {}, Total particles = {}'.format(
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
 pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)
+print 'save to meso_m.iSALE'
+pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
+print 'save to meso_A-{:3.4f}.iSALE'.format(A)
 
 
 timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
@@ -182,9 +185,8 @@ else:
 
 plt.figure(3)
 plt.imshow(pss.mesh, cmap='Greys',  interpolation='nearest')
-for KK in range(pss.Ms):
-	print np.amax(pss.materials[KK,:,:])
-	plt.figure()
-	plt.imshow(pss.materials[KK,:,:], cmap='Greys',  interpolation='nearest')
+#for KK in range(pss.Ms):
+#	plt.figure()
+#	plt.imshow(pss.materials[KK,:,:], cmap='Greys',  interpolation='nearest')
 plt.show()
 
