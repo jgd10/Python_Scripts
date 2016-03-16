@@ -26,14 +26,14 @@ def generate_mesh(X,Y,mat_no,CPPR=10,pr=0.,VF=.5,e = 0.):
 	"""
 	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects,FRAC,OBJID
 
-	Ms        = mat_no	 																				# M is the number of materials within the mesh
+	Ms        = mat_no																					# M is the number of materials within the mesh
 	mats      = np.arange(Ms)+1.
-	meshx 	  = X
-	meshy 	  = Y
+	meshx	  = X
+	meshy	  = Y
 	cppr_mid  = CPPR
 	PR        = pr
 	eccen     = e																						# Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
-	cppr_min  = int((1-PR)*cppr_mid)													    			# Min No. cells/particle radius 
+	cppr_min  = int((1-PR)*cppr_mid)																# Min No. cells/particle radius 
 	cppr_max  = int((1+PR)*cppr_mid)																	# Max No. cells/particle radius
 	vol_frac  = VF																						# Target fraction by volume of parts:void
 	mesh      = np.zeros((meshx,meshy))
@@ -41,7 +41,7 @@ def generate_mesh(X,Y,mat_no,CPPR=10,pr=0.,VF=.5,e = 0.):
 	objects   = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
 	xh        = np.arange(meshx)																		# arrays of physical positions of cell BOUNDARIES (not centres)
 	yh        = np.arange(meshy)
-	Ns        = 2*(cppr_max)+2															    			# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
+	Ns        = 2*(cppr_max)+2																		# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
 	N         = 20																						# N is the number of different particles that can be generated  
 	part_area = np.zeros((N))
 	mesh0     = np.zeros((Ns,Ns))																		# Generate mesh that is square and slightly larger than the max particle size
@@ -66,77 +66,69 @@ def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
 	Returns a float value.
 	"""
 	global cppr_mid, meshx, meshy, vol_frac
-	Area_total = meshx*meshy																		# Total Area of mesh
+	Area_total = meshx*meshy																			# Total Area of mesh
 	Area_1part = np.pi*cppr_mid**2.																		# Area of one particle
-	No_parts   = int(Area_total*vol_frac/Area_1part)+1															# Approx No. Particles, covering the volume fraction reqd.
-	No_parts   = int(No_parts)																		# There will be overlaps so overestimate by 10%
+	No_parts   = int(Area_total*vol_frac/Area_1part)+1													# Approx No. Particles, covering the volume fraction reqd.
+	No_parts   = int(No_parts)																			# There will be overlaps so overestimate by 10%
 	return No_parts							
 
 def gen_circle(r_):
-	"""
-	This function generates a circle within the base mesh0. It very simply converts
-	each point to a radial coordinate from the origin (the centre of the shape.
-	Then assesses if the radius is less than that of the circle in question. If it 
-	is, the cell is filled.
-
-	r_ : radius of the circle, origin is assumed to be the centre of the mesh0
-
-	mesh0 and an AREA are returned
-	"""
-	global mesh0, Ns																			# mesh0 is Ns x Ns in size
-	mesh0[:] = 0. 																				# Ensure that mesh0 is all zeros (as it should be before this is called)
-	x0 = cppr_max + 1.	  																		# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-	y0 = cppr_max + 1.																			# Define x0, y0 to be the centre of the mesh
-	AREA  = 0.																				# Initialise AREA as 0.
-	for j in range(Ns):																			# Iterate through all the x- and y-coords
-	    for i in range(Ns):						
-		xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
-		yc = 0.5*(j + (j+1)) - y0																	# Everything is now in cartesian coords relative to the mesh centre
-		
-		r = (xc/r_)**2. + (yc/r_)**2.																	# Find the radial distance from current coord to (x0,y0), normalised by r_
-		if r<=1:																			# If this is less than 1 (i.e. r_) then the coord is in the circle => fill
-		    mesh0[i,j] = 1.0																		# Fill cell
-		    AREA += 1																			# Increment area
-	return mesh0, AREA
+    """
+    This function generates a circle within the base mesh0. It very simply converts
+    each point to a radial coordinate from the origin (the centre of the shape.
+    Then assesses if the radius is less than that of the circle in question. If it 
+    is, the cell is filled.
+    
+    r_ : radius of the circle, origin is assumed to be the centre of the mesh0
+    
+    mesh0 and an AREA are returned
+    """
+    global mesh0, Ns																					# mesh0 is Ns x Ns in size
+    mesh0[:] = 0.																						# Ensure that mesh0 is all zeros (as it should be before this is called)
+    x0 = cppr_max + 1.																					# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+    y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
+    AREA  = 0.																							# Initialise AREA as 0.
+    for j in range(Ns):																					# Iterate through all the x- and y-coords
+        for i in range(Ns):						
+            xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
+            yc = 0.5*(j + (j+1)) - y0																	# Everything is now in cartesian coords relative to the mesh centre
+            
+            r = (xc/r_)**2. + (yc/r_)**2.																# Find the radial distance from current coord to (x0,y0), normalised by r_
+            if r<=1:																					# If this is less than 1 (i.e. r_) then the coord is in the circle => fill
+                mesh0[i,j] = 1.0																		# Fill cell
+                AREA += 1																				# Increment area
+    return mesh0, AREA
 
 def gen_ellipse(r_,a_,e_):
-	"""
-	This function generates an ellipse in mesh0. It uses a semi-major axis of r_
-	a rotation of a_ and an eccentricity of e_. It otherwise works on
-	principles similar to those used in gen_circle.
-	
-	r_ : the semi major axis (in cells)
-	a_ : the angle of rotation (in radians)
-	e_ : the eccentricity of the ellipse
-	"""
-	global mesh0, Ns
-	x0 = cppr_max + 1.
-	y0 = cppr_max + 1.
-	AREA = 0.
-	mesh0[:] = 0.																				# A safety feature to ensure that mesh0 is always all 0. before starting
-	A = r_
-	B = A*np.sqrt(1.-e_**2.)																		# A is the semi-major radius, B is the semi-minor radius
-	for j in range(Ns):
-	    for i in range(Ns):
-	        xc = 0.5*(i + (i+1)) - x0
-	        yc = 0.5*(j + (j+1)) - y0 
-	
-	        xct = xc * np.cos(a_) - yc * np.sin(a_)
-	        yct = xc * np.sin(a_) + yc * np.cos(a_)
-	        r = (xct/A)**2. + (yct/B)**2.
-	
-	        if r<=1:
-	            mesh0[i,j] = 1.
-	            AREA+=1
-	"""
-	def makeplot():
-	    fig=plt.figure()
-	    ax=fig.add_subplot(111,aspect='equal')
-	    ax.imshow(mesh0)
-	    plt.show()
-	    fig.clf()
-	"""
-	return mesh0, AREA
+    """
+    This function generates an ellipse in mesh0. It uses a semi-major axis of r_
+    a rotation of a_ and an eccentricity of e_. It otherwise works on
+    principles similar to those used in gen_circle.
+    
+    r_ : the semi major axis (in cells)
+    a_ : the angle of rotation (in radians)
+    e_ : the eccentricity of the ellipse
+    """
+    global mesh0, Ns
+    x0 = cppr_max + 1.
+    y0 = cppr_max + 1.
+    AREA = 0.
+    mesh0[:] = 0.																						# A safety feature to ensure that mesh0 is always all 0. before starting
+    A = r_
+    B = A*np.sqrt(1.-e_**2.)																			# A is the semi-major radius, B is the semi-minor radius
+    for j in range(Ns):
+        for i in range(Ns):
+            xc = 0.5*(i + (i+1)) - x0
+            yc = 0.5*(j + (j+1)) - y0 
+            
+            xct = xc * np.cos(a_) - yc * np.sin(a_)
+            yct = xc * np.sin(a_) + yc * np.cos(a_)
+            r = (xct/A)**2. + (yct/B)**2.
+            
+            if r<=1:
+                mesh0[i,j] = 1.
+                AREA+=1
+    return mesh0, AREA
 	
 def gen_circle_p(r_):
 	"""	
@@ -153,31 +145,34 @@ def gen_circle_p(r_):
 	
 	mesh0 and an AREA are returned
 	"""
-	global mesh0, Ns																			# mesh0 is Ns x Ns in size
-	CL = 1.																					# This is mesh0 so cell length is simply '1.'
-	x0 = float(Ns)/2.	  																		# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-	y0 = float(Ns)/2.																			# Define x0, y0 to be the centre of the mesh
-	AREA  = 0.																				# Initialise AREA as 0.
-	mesh0[:] = 0.																				# This is necessary to ensure the mesh is empty before use.
-	for j in range(Ns):																			# Iterate through all the x- and y-coords
+	global mesh0, Ns																				# mesh0 is Ns x Ns in size
+	CL = 1.																						    # This is mesh0 so cell length is simply '1.'
+	x0 = float(Ns)/2.																					# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+	y0 = float(Ns)/2.																					# Define x0, y0 to be the centre of the mesh
+	AREA  = 0.																							# Initialise AREA as 0.
+	mesh0[:] = 0.																						# This is necessary to ensure the mesh is empty before use.
+	for j in range(Ns):																					# Iterate through all the x- and y-coords
 	    for i in range(Ns):						
-			xc = 0.5*(i + (i+1)) - x0																# Convert current coord (centre of cell) to position relative to (x0,y0) 
-			yc = 0.5*(j + (j+1)) - y0																# Everything is now in cartesian coords relative to the mesh centre
+			xc = 0.5*(i + (i+1)) - x0																	# Convert current coord (centre of cell) to position relative to (x0,y0) 
+			yc = 0.5*(j + (j+1)) - y0																	# Everything is now in cartesian coords relative to the mesh centre
 			r = np.sqrt((xc)**2. + (yc)**2.)															# Find the radial distance from current coord to (x0,y0)_
-			if r<=(r_-np.sqrt(2.)):																		# If this is less than r_-1 then the coord is in the circle => fill COMPLETELY
-		   		mesh0[i,j] = 1.0																# Fill cell
-		   		AREA += 1																	# Increment area
-			elif abs(r-r_)<np.sqrt(2.):																# BUT if the cell centre is with root(2) of the circle edge, then partially fill
-				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
-				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
-				for I in range(10-1):
-					for J in range(10-1):															# Iterate through these
-						xxc = 0.5*(xx[I] + xx[J+1]) - x0												# Change their coordinates as before
-						yyc = 0.5*(yy[J] + yy[J+1]) - y0
+			if r<=(r_-1.):																				# If this is less than r_-1 then the coord is in the 
+																										# circle => fill COMPLETELY
+				mesh0[i,j] = 1.0																		# Fill cell
+				AREA += 1																				# Increment area
+			elif abs(r-r_)<np.sqrt(2.):																	# BUT if the cell centre is with root(2) 
+																										# of the circle edge, then partially fill
+				xx = np.arange(i,i+1,.1)																# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.arange(j,j+1,.1)																# Essentially this splits the cell into a mini-mesh 
+																										# of 10 x 10 mini cells
+				for I in range(10):
+					for J in range(10):																	# Iterate through these
+						xxc = 0.5+xx[I] - x0															# Change their coordinates as before
+						yyc = 0.5+yy[J] - y0
 						r = np.sqrt((xxc)**2. + (yyc)**2. )												# Find the radial distance from current mini coord to (x0,y0)
-						if r <= r_:															# If this is less than r_ then the mini coord is in the circle.
-							mesh0[i,j] += (.1**2.)													# Fill cell by 0.1**2 (the area of one mini-cell)
-							AREA += (.1**2.)													# Increment area by the same amount
+						if r <= r_:																		# If this is less than r_ then the mini coord is in the circle.
+							mesh0[i,j] += (.1**2.)														# Fill cell by 0.1**2 (the area of one mini-cell)
+							AREA += (.1**2.)															# Increment area by the same amount
 	"""	
 	plt.figure()
 	plt.imshow(mesh0,cmap='Greys',interpolation='nearest')
@@ -210,7 +205,7 @@ def gen_polygon(sides,radii):
 	I   = np.arange(n)																					# array of vertex numbers
 	ang = np.random.rand(n)																				
 	phi = np.pi/2. - ang*np.pi*2./n - I*np.pi*2./n														# Generate 'n' random angles 
-	rho = radii				    																		# Ensure each vertex is within an arc, 1/nth of a circle
+	rho = radii																						# Ensure each vertex is within an arc, 1/nth of a circle
 	R[0,:] = rho*np.cos(phi)																			# Each vertex will also be successive, such that drawing a line between
 	R[1,:] = rho*np.sin(phi)																			# each one in order, will result in no crossed lines.
 																										# Convert into cartesian coords and store in R
@@ -219,27 +214,35 @@ def gen_polygon(sides,radii):
 	x0 = cppr_max + 1.  
 	y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
 	for j in range(Ns-1):																				# Iterate through all the x- and y-coords
-		for i in range(Ns-1):																			# N-1 because we want the centres of each cell, and there are only N-1 of these!
+		for i in range(Ns-1):																			# N-1 because we want the centres of each cell, 
+																										# and there are only N-1 of these!
 			xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
 			yc = 0.5*(j + (j+1)) - y0																	# Everything is now in indices, with (x0,y0)
 
-			sx = xc - qx		         																# s = vector difference between current coord and ref coord
+			sx = xc - qx																			# s = vector difference between current coord and ref coord
 			sy = yc - qy		   
 			intersection = 0																			# Initialise no. intersections as 0
 			for l in range(n-1):																		# cycle through each edge, bar the last
-				rx = R[0,l+1] - R[0,l]																	# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+				rx = R[0,l+1] - R[0,l]																	# Calculate vector of each edge (r), i.e. the line between 
+																										# the lth vertex and the l+1th vertex
 				ry = R[1,l+1] - R[1,l]
-				RxS = (rx*sy-ry*sx)																		# Vector product of r and s (with z = 0), technically produces only a z-component
+				RxS = (rx*sy-ry*sx)																		# Vector product of r and s (with z = 0), technically 
+																										# produces only a z-component
 				if RxS!=0.:																				# If r x s  = 0 then lines are parallel
-																										# If r x s != 0 then lines are NOT parallel, but since they are of finite length, may not intersect
+																										# If r x s != 0 then lines are NOT parallel, 
+																										# but since they are of finite length, may not intersect
 					t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
 					u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS
-																										# Consider two points along each line. They are t and u fractions of the way along each line
-																										# i.e. at q + us and p + tr. To find where lines intersect, consider these two equal and find t & u
-																										# if 0 <= t,u <= 1 Then there is intersection  between the lines of finite length!
+																										# Consider two points along each line. 
+																										# They are t and u fractions of the way along each line
+																										# i.e. at q + us and p + tr. To find where lines intersect,
+																										# consider these two equal and find t & u
+																										# if 0 <= t,u <= 1 Then there is intersection between 
+																										# the lines of finite length!
 					if t<=1. and t>=0. and u<=1. and u>=0.:
 						intersection = intersection + 1
-			rx = R[0,0] - R[0,n-1]																		# Do the last edge. Done separately to avoid needing a circular 'for' loop
+			rx = R[0,0] - R[0,n-1]																		# Do the last edge. Done separately to avoid needing a circular
+																										# 'for' loop
 			ry = R[1,0] - R[1,n-1]
 			if (rx*sy-ry*sy)!=0.:
 				RxS = (rx*sy-ry*sx)
@@ -247,7 +250,8 @@ def gen_polygon(sides,radii):
 				u = ((qx-R[0,n-1])*ry - (qy-R[1,n-1])*rx)/RxS
 				if t<=1. and t>=0. and u<=1. and u>=0.:
 					intersection = intersection + 1
-			if (intersection%2==0.):																	# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+			if (intersection%2==0.):																	# If number of intersections is divisible by 2 (or just zero)
+																										# -> fill that cell!
 				mesh0[i,j] = 1.0
 				AREA += 1
 
@@ -270,32 +274,37 @@ def check_coords_full(shape,x,y):
 	"""
 	global mesh, meshx, meshy, cppr_mid																	# use global parameters
 	X, Y   = np.shape(shape)																			# Dimensions of particle's mesh
-	i_edge = int(x - X/2)																				# Location of the edge of the shape to be checked's mesh; within the main mesh.
+	i_edge = int(x - X/2)																				# Location of the edge of the shape to be checked's mesh; 
+																										# within the main mesh.
 	j_edge = int(y - Y/2)
 	i_finl = i_edge + X
 	j_finl = j_edge + Y
 	CHECK  = 0																							# Initialise the CHECK as 0; 0 == all fine
 	
 	if i_edge < 0:																						# If the coords have the particle being generated over the mesh boundary
-		I_initial = abs(i_edge)																			# This bit checks for this, and reassigns a negative starting index to zero
+		I_initial = abs(i_edge)																			# This bit checks for this, 
+																										# and reassigns a negative starting index to zero
 		i_edge    = 0																					# However, the polygon's mesh will not completely be in the main mesh 
 	else:																								# So I_initial defines the cut-off point
-	    I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
+	    I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh,
+																										# then I_initial is just 0
 	if j_edge < 0:																						# Repeat for the j-coordinate
 		J_initial = abs(j_edge) 
 		j_edge = 0
 	else:
 		J_initial = 0
 	
-	if i_finl > meshx: i_finl = meshx																	# If coords place shape outside of other end of mesh, redefine end edges.		
+	if i_finl > meshx: i_finl = meshx																	# If coords place shape outside of other end of mesh,
+																										# redefine end edges.		
 	if j_finl > meshy: j_finl = meshy	
 	
 	for i in range(i_edge, i_finl, 1):																	# Iterate over the section of the full mesh of interest
 		I = i - i_edge + I_initial																		# The equivalent index within the polygon's mesh
 		for j in range(j_edge, j_finl, 1):
 			J = j - j_edge + J_initial
-	    		if mesh[i,j]!=0. and shape[I,J] != 0.:
-					CHECK = 1																			# If there's a point in the polygon's mesh that has material, AND the corresponding point    
+			if mesh[i,j]!=0. and shape[I,J] != 0.:
+					CHECK = 1																			# If there's a point in the polygon's mesh that has material,
+																										# AND the corresponding point    
 	return CHECK																						# has material in it in the main mesh => failure and CHECK = 1
 
 
@@ -308,12 +317,14 @@ def drop_shape_into_mesh(shape,rr):
 	"""
 	global mesh, meshx, meshy, cppr_max, cppr_min, materials
 	
-	cell_limit = (np.pi*float(cppr_max)**2.)/100.																# Max number of overlapping cells should scale with area. area ~= 110 cells for 6cppr
-																						# Does NOT need to be integer since values in the mesh are floats, 
-																						# and it is their sum that is calculated.
-	touching   = 0																				# Initialise the indicators for this function
-	passes     = 1																				# here are 'passes' and 'counter' similar to check_coords_full
-	counter    = 0																				# But this time there is 'touching' which indicates contact between particles
+	cell_limit = (np.pi*float(cppr_max)**2.)/100.														# Max number of overlapping cells should scale with area.
+																										# area ~= 110 cells for 6cppr
+																										# Does NOT need to be integer since values in the mesh are floats, 
+																										# and it is their sum that is calculated.
+	touching   = 0																						# Initialise the indicators for this function
+	passes     = 1																						# here are 'passes' and 'counter' similar to check_coords_full
+	counter    = 0																						# But this time there is 'touching' which indicates
+																										# contact between particles
 	x,y = gen_coord_basic()
 	
 	Nx, Ny     = meshx, meshy
@@ -324,26 +335,29 @@ def drop_shape_into_mesh(shape,rr):
 		if x > Nx: x = 0
 		if x < 0:  x = Nx
 		if y > Ny: y = 0
-		if y < 0:  y = Ny																		# If the coord moves out of the mesh, wrap back around.
-		i_edge   = x - cppr_max - 1																	# Location of the edge of the polygon's mesh, within the main mesh.
+		if y < 0:  y = Ny																				# If the coord moves out of the mesh, wrap back around.
+		i_edge   = x - cppr_max - 1																		# Location of the edge of the polygon's mesh, within the main mesh.
 		j_edge   = y - cppr_max - 1
-		i_finl   = x + cppr_max + 1																	# The indices refer to the close edge to the origin, the extra cell should be added on the other side
-		j_finl   = y + cppr_max + 1																	# i.e. the side furthest from the origin
-		    	
-		if i_edge < 0:																			# If the coords have the particle being generated over the mesh boundary
-		    I_initial = abs(i_edge)																	# This bit checks for this, and reassigns a negative starting index to zero
-		    i_edge    = 0																		# However, the polygon's mesh will not completely be in the main mesh 
-		else:																				# So I_initial defines the cut-off point
-		    I_initial = 0																		# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
-		if j_edge < 0:																			# Repeat for the j-coordinate
+		i_finl   = x + cppr_max + 1																		# The indices refer to the close edge to the origin,
+																										# the extra cell should be added on the other side
+		j_finl   = y + cppr_max + 1																		# i.e. the side furthest from the origin
+			
+		if i_edge < 0:																					# If the coords have the particle being generated over the mesh boundary
+		    I_initial = abs(i_edge)																		# This bit checks for this, and reassigns a negative starting
+																										# index to zero
+		    i_edge    = 0																				# However, the polygon's mesh will not completely be in the main mesh 
+		else:																							# So I_initial defines the cut-off point
+		    I_initial = 0																				# If the polygon's mesh does not extend beyond the main mesh,
+																										# then I_initial is just 0
+		if j_edge < 0:																					# Repeat for the j-coordinate
 		    J_initial = abs(j_edge) 
 		    j_edge = 0
 		else:
 		    J_initial = 0
 		
-		I_final = Px 																					# In a numpy array '-1' indicates the last element.		
+		I_final = Px																					# In a numpy array '-1' indicates the last element.		
 		if (i_finl)>Nx:																					# Similarly for the other end of the mesh
-			I_final -= abs(Nx-i_finl) 																	# The above only sorts out two sides of the mesh
+			I_final -= abs(Nx-i_finl)																	# The above only sorts out two sides of the mesh
 			i_finl   = Nx
 		J_final = Py
 		if (j_finl)>Ny:
@@ -351,16 +365,20 @@ def drop_shape_into_mesh(shape,rr):
 			j_finl   = Ny
 		
 		
-		temp_shape = shape[I_initial:I_final,J_initial:J_final]											# The rectangular array containing the portion of shape to be placed into mesh 
+		temp_shape = shape[I_initial:I_final,J_initial:J_final]											# The rectangular array containing the portion of shape 
+																										# to be placed into mesh 
 		temp_mesh  = mesh[i_edge:i_finl,j_edge:j_finl]													# The equivalent rectangular array within the mesh, in the correct place
-		test       = np.minimum(temp_shape,temp_mesh)													# An array containing any points that have material in, in the same place, in BOTH arrays		
+		test       = np.minimum(temp_shape,temp_mesh)													# An array containing any points that have material in,
+																										# in the same place, in BOTH arrays		
 
-		if (np.sum(test) > cell_limit or np.sum(test) == 0.):  											# If 'test' is > 2, then there are more than 2 cells overlapping with other objects at this position
+		if (np.sum(test) > cell_limit or np.sum(test) == 0.):											# If 'test' is > 2, then there are more than 2 cells 
+																										# overlapping with other objects at this position
 		    rx = random.randint(-cppr_min,cppr_min)
 		    ry = random.randint(-cppr_min,cppr_min)
 		    y += ry 
 		    x += rx
-		elif(np.sum(test) <= cell_limit):																# If there are fewer than 2 overlapping cells, but MORE than 0, place shape here.
+		elif(np.sum(test) <= cell_limit):																# If there are fewer than 2 overlapping cells, but MORE than 0,
+																										# place shape here.
 			"""
 		    #plt.figure(1)
 		    #plt.imshow(np.maximum(mesh[i_edge:i_finl,j_edge:j_finl],shape[I_initial:I_final,J_initial:J_final]), cmap='Greys',  interpolation='nearest')
@@ -368,11 +386,13 @@ def drop_shape_into_mesh(shape,rr):
 		    #plt.show()
 			"""
 			mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])	
-																										# materials contains each cell's material number. Prior to mat assignment 
-																										#it is just the particle number
+																										# materials contains each cell's material number.
+																										# Prior to mat assignment 
+																										# it is just the particle number
 			touching = 1																				# Assign 'touching' a value of 1 to break loop
 			#temp_shape[temp_shape>0.] = 1.																# Change all values in temp_shape to 1., if not already 
-			area = np.sum(temp_shape) - np.sum(test)													# Area placed into mesh is the sum of all positive points in temp_shape - overlap
+			area = np.sum(temp_shape) - np.sum(test)													# Area placed into mesh is the sum of all positive points
+																										# in temp_shape - overlap
 		else:
 		    pass
 	return x,y,area
@@ -404,15 +424,18 @@ def insert_shape_into_mesh(shape,x0,y0):
 	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
 	i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
 	j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
-	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin, an extra cell is added either side
+	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
+																										# an extra cell is added either side
 	j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
 	
 	""" 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
-	if i_edge < 0:																						# Condition if the coords have the particle being generated over the mesh boundary
+	if i_edge < 0:																						# Condition if the coords have the particle being generated 
+																										# over the mesh boundary
 		I_initial = abs(i_edge)																			# a negative starting index is reassigned to zero
 		i_edge    = 0																					# The polygon's mesh will not completely be in the main mesh 
 	else:																								# So I_initial defines the cut-off point
-		I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
+		I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh,
+																										# then I_initial is just 0
 	if j_edge < 0:																						# Repeat for the j-coordinate
 		J_initial = abs(j_edge) 
 		j_edge = 0
@@ -420,8 +443,10 @@ def insert_shape_into_mesh(shape,x0,y0):
 		J_initial = 0
 	
 	I_final = Px 
-	if (i_finl)>meshx:																					# This section deals with the occurrence of the shape overlapping with the opposite ends of
-		I_final -= abs(meshx-i_finl) 																	# meshes. And works on the same principles as above, although the maths is slightly different
+	if (i_finl)>meshx:																					# This section deals with the occurrence of the shape overlapping 
+																										# with the opposite ends of
+		I_final -= abs(meshx-i_finl)																	# meshes. And works on the same principles as above, 
+																										# although the maths is slightly different
 		i_finl   = meshx
 	J_final = Py
 	if (j_finl)>meshy:
@@ -433,7 +458,6 @@ def insert_shape_into_mesh(shape,x0,y0):
 	
 														
 	""" The shape is inserted by comparing, and taking the maximum, of the two arrays  """
-#	temp_shape[temp_shape>0.] = 1.																		# All non-zero elements become 1, as particle may have different material number
 	area = np.sum(temp_shape)																			# Area is sum of all these points
 	return area
 
@@ -454,15 +478,18 @@ def place_shape(shape,x0,y0,mat,obj):
 	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
 	i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
 	j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
-	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin, an extra cell is added either side
+	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
+																										# an extra cell is added either side
 	j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
 	
 	""" 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
-	if i_edge < 0:																						# Condition if the coords have the particle being generated over the mesh boundary
+	if i_edge < 0:																						# Condition if the coords have the particle being generated 
+																										# over the mesh boundary
 		I_initial = abs(i_edge)																			# a negative starting index is reassigned to zero
 		i_edge    = 0																					# The polygon's mesh will not completely be in the main mesh 
 	else:																								# So I_initial defines the cut-off point
-		I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, then I_initial is just 0
+		I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, 
+																										# then I_initial is just 0
 	if j_edge < 0:																						# Repeat for the j-coordinate
 		J_initial = abs(j_edge) 
 		j_edge = 0
@@ -470,8 +497,10 @@ def place_shape(shape,x0,y0,mat,obj):
 		J_initial = 0
 	
 	I_final = Px 
-	if (i_finl)>meshx:																					# This section deals with the occurrence of the shape overlapping with the opposite ends of
-		I_final -= abs(meshx-i_finl) 																	# meshes. And works on the same principles as above, although the maths is slightly different
+	if (i_finl)>meshx:																					# This section deals with the occurrence of the shape 
+																										# overlapping with the opposite ends of
+		I_final -= abs(meshx-i_finl)																	# meshes. And works on the same principles as above, 
+																										# although the maths is slightly different
 		i_finl   = meshx
 	J_final = Py
 	if (j_finl)>meshy:
@@ -514,38 +543,40 @@ def gen_coord_basic():
 
 
 def gen_coord(shape):																					
-	"""
-	Function generating a coordinate at which the 'shape' can go.
-	The function takes a 'shape' as an argument (e.g. a circle or ellipse)
-	then it selects a cell at random from the main mesh. However, it only 
-	includes cells that are not filled with material initilally in its
-	selection. Then the coordinates are checked using the check_coords_full
-	function. If this is succesful, the loop breaks and the coords are 
-	returned. If not, then the loop generates new coords and repeats until
-	either success is achieved or 5000 tries are exceeded. If the counter
-	exceeds 5000, the loop is ended and failure noted in the 'passes' variable.
-
-	passes, x and y are all returned at the end of the function. Success has 
-	passes = 0, and failure has passes = 1.
-
-	shape : array containing the shape to be checked. This does not have to be regular 
-	"""
-
-	global mesh																							# use global parameters (the mesh itself, mesh size)
-	check   = 1																							# Initialise the indicator variables
-	counter = 0																							# and the counter
-	passes  = 0																							# passes should start as 0 and check should start as 1.
-	indices = np.where(mesh==0.)																		# Generates an array of all indices in the main mesh of unassigned cells
-	indices = np.column_stack(indices)																	# column_stack mushes them together such that random choice can choose pairs of coords
-	while check == 1:																					# Begin the loop. whilst check = 1, continue to loop 
-	    x,y = random.choice(indices)																	# This randomly selects one pair of coordinates!
-	    check = check_coords_full(shape,x,y)															# Function to check if the polygon generated will fit in the generated coords
-	    counter += 1																					# Increment the counter
-	    if counter>5000: 																				# If the counter exceeds 5000, this is the break clause
-	        check = 0																					# Break the loop and report the failure in the return
-	        passes= 1																					# if counter exceeds 1000 -> break loop and assign passes[k] = 1
-		break
-	return x,y,passes
+    """
+    Function generating a coordinate at which the 'shape' can go.
+    The function takes a 'shape' as an argument (e.g. a circle or ellipse)
+    then it selects a cell at random from the main mesh. However, it only 
+    includes cells that are not filled with material initilally in its
+    selection. Then the coordinates are checked using the check_coords_full
+    function. If this is succesful, the loop breaks and the coords are 
+    returned. If not, then the loop generates new coords and repeats until
+    either success is achieved or 5000 tries are exceeded. If the counter
+    exceeds 5000, the loop is ended and failure noted in the 'passes' variable.
+    
+    passes, x and y are all returned at the end of the function. Success has 
+    passes = 0, and failure has passes = 1.
+    
+    shape : array containing the shape to be checked. This does not have to be regular 
+    """
+    
+    global mesh																							# use global parameters (the mesh itself, mesh size)
+    check   = 1																							# Initialise the indicator variables
+    counter = 0																							# and the counter
+    passes  = 0																							# passes should start as 0 and check should start as 1.
+    indices = np.where(mesh==0.)																		# Generates an array of all indices in the main mesh of unassigned cells
+    indices = np.column_stack(indices)																	# column_stack mushes them together such that random choice 
+    																									# can choose pairs of coords
+    while check == 1:																					# Begin the loop. whilst check = 1, continue to loop 
+        x,y = random.choice(indices)																	# This randomly selects one pair of coordinates!
+        check = check_coords_full(shape,x,y)															# Function to check if the polygon generated will fit 
+        																								# in the generated coords
+        counter += 1																					# Increment the counter
+        if counter>5000:																				# If the counter exceeds 5000, this is the break clause
+            check = 0																					# Break the loop and report the failure in the return
+            passes= 1																					# if counter exceeds 1000 -> break loop and assign passes[k] = 1
+        break
+    return x,y,passes
 
 
 
@@ -560,7 +591,8 @@ def mat_basic(mats,N):
 
 	Returns array 'MAT' of all assigned mat numbers
 	"""
-	MAT = np.random.choice(mats,N)																		# This function randomly chooses values from 'mats' to populate an array of size N
+	MAT = np.random.choice(mats,N)																		# This function randomly chooses values from 'mats' 
+																										# to populate an array of size N
 	return MAT
 
 def mat_assignment_1(mats,xc,yc,r):						
@@ -583,87 +615,35 @@ def mat_assignment_1(mats,xc,yc,r):
 	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
 	i = 0																								# Counts the number of particles that have been assigned
 	while i < N:																						# Loop every particle and assign each one in turn.	
-		lowx   = xc[i] - cppr_max*L*6.																	# Create a 'box' around each particle (in turn) that is 4 diameters by 4 diameters
+		lowx   = xc[i] - cppr_max*L*6.																	# Create a 'box' around each particle (in turn) that is
+																										# 4 diameters by 4 diameters
 		higx   = xc[i] + cppr_max*L*6.
 		lowy   = yc[i] - cppr_max*L*6.
 		higy   = yc[i] + cppr_max*L*6.
-		boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)*(MAT!=0.)] 								# Array containing a list of all material numbers within the 'box' (disregarding unassigned materials)
+		boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)*(MAT!=0.)]									# Array containing a list of all material numbers within the 'box' 
+																										# (disregarding unassigned materials)
 		M      = mats[np.in1d(mats,boxmat,invert=True)]													# Array containing all values in 'mats' that are NOT present in the box
-		if np.size(M) == 0:																				# If M contains no values, then all the  materials are assigned at least once in the box already
-			elements = []																				# If the particles surrounding this one have all been assigned, check for duplicates!
+		if np.size(M) == 0:																				# If M contains no values, then all the  materials are assigned at 
+																										# least once in the box already
+			elements = []																				# If the particles surrounding this one have all been assigned, 
+																										# check for duplicates!
 			for item in boxmat:																			# If there are duplicates already, DON'T assign these if possible
 				H = boxmat - item																		# Cycle through each item in the box array. Subtract it from the array
-				if np.size(H[H==0])==1:																	# If the new array (H) has more than one zero, there was a duplicate, and it should be ignored
+				if np.size(H[H==0])==1:																	# If the new array (H) has more than one zero, 
+																										# there was a duplicate, and it should be ignored
 					elements.append(item)																# Add all non-duplicates to the list 'elements'
 			if np.size(elements) == 0:																	# If 'elements' is empty (only duplicates present) choose at random
 				MAT[i] = np.random.choice(mats,1)														# If there is no optimum value it randomly selects one from mats
 			else:																						# else randomly select an element from the 'elements' list
 				MAT[i] = np.random.choice(elements,1)													# which should only contain materials that appear once
-		elif np.size(M) == 1:																			# If M only contains one value (i.e. one material doesn't appear in the box
+		elif np.size(M) == 1:																			# If M only contains one value (i.e. one material doesn't 
+																										# appear in the box)
 			MAT[i] = M																					# Use that!
 		else:																							# Otherwise there may be multiple elements not present
 			MAT[i] = M[0]																				# So select the first in the array for assignment
 		i += 1
 	return MAT
 
-def mat_assignment_2(mats,r):
-	"""
-	Function to assign material numbers to each particle.
-	This function assigns material numbers to randomly selected
-	particles rather than randomly allocating material numbers
-	to particles in turn.
-	
-	mats : array containing all the material numbers to be assigned
-	r    :  "   "  radii    "   "      "    . (array)
-
-	Returns array 'MAT' containg a material number for every particle
-	"""
-	N       = np.size(r)																				# No. of particles
-	M       = np.size(mats)
-	MAT     = np.zeros((N))																				# Array for all material numbers of all particles
-	indices = np.arange(N)
-	i = 0																								# Counts the number of particles that have been assigned
-	j = 0
-	while i < N:																						# Loop every particle and assign each one in turn.	
-		if j > (M-1): j = 0
-		k 		   = np.random.choice(indices[indices != -1],1)
-		MAT[k] 	   = mats[j]
-		indices[k] = -1
-		i += 1
-		j += 1
-	return MAT
-
-def mat_assignment_3(mats,xc,yc):
-	N    = np.size(xc)																					# No. of particles
-	M    = np.size(mats)
-	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
-	i    = 0
-	while np.any(MAT==0.):
-		if i>=M: i = 0
-		X = np.random.uniform(np.amin(xc),np.amax(xc))
-		Y = np.random.uniform(np.amin(yc),np.amax(yc))
-		MAT[(abs(xc-X)<1.)*(abs(yc-Y)<1.)] = mats[i]
-		i += 1
-	plt.figure()
-	plt.plot(xc,MAT,linestyle=' ',marker='o')
-	plt.show()
-	return MAT
-
-def mat_assignment_4(mats,xc):
-	N    = np.size(xc)																					# No. of particles
-	M    = np.size(mats)
-	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
-	i    = 0
-	indices = np.argsort(xc)
-	x_sorted = xc[indices]
-	for item in x_sorted:
-		if i >= M: i = 0
-		MAT[xc==item] = mats[i]
-		i+=1
-	plt.figure()
-	plt.plot(xc,MAT,linestyle=' ',marker='o')
-	plt.show()
-	return MAT
 
 def mat_assignment(mats,xc,yc,r):						
 	"""
@@ -706,11 +686,12 @@ def mat_assignment(mats,xc,yc,r):
 	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
 	i = 0																								# Counts the number of particles that have been assigned
 	while i < N:																						# Loop every particle and assign each one in turn.	
-		lowx   = xc[i] - cppr_max*L*6.																	# Create a 'box' around each particle (in turn) that is 4 diameters by 4 diameters
+		lowx   = xc[i] - cppr_max*L*6.																	# Create a 'box' around each particle (in turn) 
+																										# that is 4 diameters by 4 diameters
 		higx   = xc[i] + cppr_max*L*6.
 		lowy   = yc[i] - cppr_max*L*6.
 		higy   = yc[i] + cppr_max*L*6.
-		boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)] 											# Array containing a list of all material numbers within the 'box' 
+		boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]											# Array containing a list of all material numbers within the 'box' 
 		boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]											# Array containing the corresponding xcoords
 		boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]											# and the ycoords
 		nn     =  np.size(boxmat)
@@ -720,14 +701,17 @@ def mat_assignment(mats,xc,yc,r):
 		ind = np.argsort(D)																				# Sort the particles into order of distance from the considered particle
 		BXM= boxmat[ind]																				# Sort the materials into the corresponding order
 		DU = np.unique(BXM[:M])																			# Only select the M closest particles
-		if np.array_equal(DU, mats):																	# If the unique elements in this array equate the array of materials then all are taken
+		if np.array_equal(DU, mats):																	# If the unique elements in this array equate the array of 
+																										# materials then all are taken
 			mm     = BXM[M-1]                                                                           
-			MAT[i] = mm		  						           											# Set the particle material to be of the one furthest from the starting particle
-			materials[materials==-1*(i+1)] = mm                                                            # Assign all filled cells 
+			MAT[i] = mm																				# Set the particle material to be of the one furthest from 
+																										# the starting particle
+			materials[materials==-1*(i+1)] = mm                                                         # Assign all filled cells 
 		else:																							# Else there is a material in mats that is NOT in DU
-			indices = np.in1d(mats,DU,invert=True)														# This finds the indices of all elements that only appear in mats and not DU
+			indices = np.in1d(mats,DU,invert=True)														# This finds the indices of all elements that only appear in 
+																										# mats and not DU
 			mm      = np.random.choice(mats[indices],1)
-			MAT[i]  = mm                            													# Randomly select one to be the current particle's material number
+			MAT[i]  = mm																	# Randomly select one to be the current particle's material number
 			materials[materials==-1*(i+1)] = mm
 		i += 1																							# Increment i
 	return MAT
@@ -758,8 +742,8 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	"""
 	global cppr_mid, meshx, meshy,cppr_max
 	
-	N           = np.size(X)					  														# No. of particles
-	mean_radii  = np.mean(radii)				   														# Calculate the mean radii	
+	N           = np.size(X)																			# No. of particles
+	mean_radii  = np.mean(radii)																		# Calculate the mean radii	
 	D           = np.zeros((N))																			# D is an array for the distances between particles
 	GRIDSPC     = np.amax(radii)/cppr_max																# Physical distance/cell (SI)
 	Dtouch      = []																					# The final list of distances for parts in contact
@@ -772,77 +756,97 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	if plot == True:																					# If plot == True then produce a figure
 	    fig = plt.figure()
 	    ax = fig.add_subplot(111,aspect='equal')
-	    ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic matches the mesh in orientation
+	    ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic 
+																										# matches the mesh in orientation
 	    ax.set_ylim(meshx*GRIDSPC,0)
-	    for i in range(N):																				# Plot each circle in turn
-	        circle = plt.Circle((X[i],Y[i]),radii[i],color='{:1.2f}'.format((MAT[i])*.5/np.amax(MAT)))  # give each one a color based on their material number. NB any color = 1. will be WHITE 
-	        ax.add_patch(circle)
+        for i in range(N):																				# Plot each circle in turn
+            ax.plot([X[i]],[Y[i]],color='k',marker='o',linestyle=' ',ms=3)
+        #    circle = plt.Circle((X[i],Y[i]),radii[i],color='{:1.2f}'.format((MAT[i])*.5/np.amax(MAT)))  # give each one a color based on their material number. 
+
+																										# NB any color = 1. will be WHITE 
+        #ax.add_patch(circle)
 	
 	for i in range(N-1):
-		D *= 0.																							 # Initialise D eah loop, in case it is full and to ensure nothing carries over
+		D *= 0.																							 # Initialise D each loop, in case it is full and 
+																										 # to ensure nothing carries over
 		D -= 1.
-		for j in range(N-1):				  															 # find distances between current particle and ALL other particles and store these in D
+		for j in range(N-1):																			 # find distances between current particle and 
+																										 # ALL other particles and store these in D
 			dx = X[i] - X[j]
 			dy = Y[i] - Y[j]
 			distance = np.sqrt(dx**2. + dy**2.)
 			D[j] = distance
-			if D[j]>0. and D[j]<upper_bound[i]:			   												 # If particles overlap draw a red line between their centres
-				if plot == True: 																			
+			if D[j]>0. and D[j]<upper_bound[i]:															 # If particles overlap draw a red line between their centres
+				if plot == True:																			
 					ax.plot([X[i],X[j]],[Y[i],Y[j]],lw=1.,color='r')
 				Dtouch.append(D[j])
 				if MAT[i] == MAT[j]: B += 1
 	    
 	
-	Dtouch = np.array(Dtouch)				   															 # Convert to numpy array
+	Dtouch = np.array(Dtouch)																			 # Convert to numpy array
 	 
-	A = float(np.size(Dtouch))/float(N)		   															 # The size of Dtouch/total part number is the mean
-	B = float(B)/float(N)																				 # B is the average number of contacts/particle that are between identical materials
+	A = float(np.size(Dtouch))/float(N)																	 # The size of Dtouch/total part number is the mean
+	B = float(B)/float(N)																				 # B is the average number of contacts/particle that are 
+																										 # between identical materials
 	if plot == True: 
 		ax.set_title('$A = ${:1.3f}'.format(A))
-		plt.savefig('contacts_figure_A-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=400)						 # Save the figure
+		plt.savefig('contacts_figure_A-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=600)						 # Save the figure
 		plt.show()
 	
 	return A, B
 
+def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    """
+    Saves particle placement information in a meso.iSALE file in format:
+    MATERIAL : X0 : Y0 : RADIUS
+    This can be read by iSALE. NB X,Y and R are in physical units
+    """
+    fname += '_A-{:3.4f}.iSALE'.format(A)
+    
+    ALL  = np.column_stack((MATS,X,Y,R))                                                
+    np.savetxt(fname,ALL,comments='')
+    return
+
 def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
-	"""
-	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
-	This compiles the integer indices of each cell, as well as the material in them and the fraction
-	of matter present. It saves all this as the filename specified by the user, with the default as 
-	meso_m.iSALE
-
-	fname   : The filename to be used for the text file being used
-	SHAPENO : The indexes of each shape within mesh_Shps
-	X       : The xcoord of the shape centre (in cells)
-	Y       : The ycoord of the shape centre (in cells)
-	MATS    : The array of each corresponding material number to each particle
-	n       : The total number of particles
-
-	returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
-
-	NB This function will remake the mesh.
-	"""
-	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
-	XI    = np.zeros((meshx*meshy))	
-	YI    = np.zeros((meshx*meshy))
-	for k in range(n):
-		place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k],k)
-
-	K = 0
-	materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
-	for i in range(meshx):
-		for j in range(meshy):
-			XI[K] = i
-			YI[K] = j
-			for mm in range(Ms):
-				FRAC[mm,K] = materials[mm,i,j]
-				OBJID[mm,K]= objects[mm,i,j]														# each particle number
-			K += 1
-	FRAC = check_FRACs(FRAC)
-	HEAD = '{},{}'.format(K,Ms)
-	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
-	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
-	return
+    """
+    A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
+    This compiles the integer indices of each cell, as well as the material in them and the fraction
+    of matter present. It saves all this as the filename specified by the user, with the default as 
+    meso_m.iSALE
+    
+    fname   : The filename to be used for the text file being used
+    SHAPENO : The indexes of each shape within mesh_Shps
+    X       : The xcoord of the shape centre (in cells)
+    Y       : The ycoord of the shape centre (in cells)
+    MATS    : The array of each corresponding material number to each particle
+    n       : The total number of particles
+    
+    returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
+    
+    NB This function will remake the mesh.
+    """
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    XI    = np.zeros((meshx*meshy))	
+    YI    = np.zeros((meshx*meshy))
+    for k in range(n):
+	    place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],MATS[k],k)
+    
+    K = 0
+    materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
+    for i in range(meshx):
+	for j in range(meshy):
+		XI[K] = i
+		YI[K] = j
+		for mm in range(Ms):
+			FRAC[mm,K] = materials[mm,i,j]
+			OBJID[mm,K]= objects[mm,i,j]														# each particle number
+		K += 1
+    FRAC = check_FRACs(FRAC)
+    HEAD = '{},{}'.format(K,Ms)
+    ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
+    return
 
 def save_general_mesh(fname='meso_m.iSALE'):
 	"""
@@ -862,7 +866,8 @@ def save_general_mesh(fname='meso_m.iSALE'):
 	K = 0
 	XI    = np.zeros((meshx*meshy))	
 	YI    = np.zeros((meshx*meshy))
-	materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
+	materials = materials[:,::-1,:]																		# Reverse array vertically, 
+																										# as it is read into iSALE upside down otherwise
 	for i in range(meshx):
 		for j in range(meshy):
 			XI[K] = i
@@ -872,7 +877,7 @@ def save_general_mesh(fname='meso_m.iSALE'):
 			K += 1
 	FRAC = check_FRACs(FRAC)
 	HEAD = '{},{}'.format(K,Ms)
-	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+	ALL  = np.column_stack((XI,YI,FRAC.transpose()))							# ,OBJID.transpose())) Only include if particle number needed
     
 	#fig, ax = plt.subplots()
 	#cax = ax.imshow(materials[0,:,:],cmap='Greys',interpolation='nearest',vmin=0,vmax=1)
@@ -934,7 +939,7 @@ def fill_plate(y1,y2,mat,invert=False):
 	assert y2>y1, 'ERROR: 2nd y value is less than the first, the function accepts them in ascending order' 
 	for j in range(meshx):
 		if j <= y2 and j >= y1:
-			materials[:,j,:]     = 0. 																# This ensures that plates override in the order they are placed.
+			materials[:,j,:]     = 0.																	# This ensures that plates override in the order they are placed.
 			materials[mat-1,j,:] = 1.
 			mesh[j,:]            = 1.
 	return
@@ -953,7 +958,7 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
 	
 	global meshx,meshy,materials,mesh
 	AREA = 0.
-	if mixed == True:																				# If there are to be mixed cells, then set MIX to 1.
+	if mixed == True:																					# If there are to be mixed cells, then set MIX to 1.
 		MIX = 1.
 	else:
 		MIX = 0.
@@ -962,7 +967,7 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
 	y2 = r2[1]
 	y1 = r1[1]
 	assert x1!=x2,'ERROR: x2 is equal to x1, this is a vertical line, use fill_left or fill_right'
-	M = (y2-y1)/(x2-x1)																				# Calculate the equation of the line between x1,y1 and x2,y2
+	M = (y2-y1)/(x2-x1)																					# Calculate the equation of the line between x1,y1 and x2,y2
 	C = y1 - M*x1
 	for i in range(meshx):
 		for j in range(meshy):
@@ -973,9 +978,9 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
 			if (j+.5) < y2 and (j+.5) > y1:
 				if invert == False:																		# If the fill is not inverted do below
 					if (xc-A) < -1.*np.sqrt(2.)*MIX:													# If the cell centre falls under this line then fill fully
-				   		mesh[i,j]            = 1.0														# If MIX=0. then this will do it for all cells
+						mesh[i,j]            = 1.0														# If MIX=0. then this will do it for all cells
 						materials[mat-1,i,j] = 1.0
-				   		AREA += 1																		# If MIX=1. then the ones right next to the line will be mixed
+						AREA += 1																		# If MIX=1. then the ones right next to the line will be mixed
 					elif abs(xc-A) <= np.sqrt(2.) and mixed == True:									# If mixed cells wanted and the cell is within the necessary range
 						xx = np.linspace(i,i+1,11)														# Split into 10x10 grid and fill, depending on these values.
 						yy = np.linspace(j,j+1,11)						
@@ -991,7 +996,7 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
 									AREA                 += (.1**2.)			
 				elif invert == True:
 					if (xc-A) > np.sqrt(2.)*MIX:				
-				   		mesh[i,j]            = 1.0														# If MIX=0. then this will do it for all cells
+						mesh[i,j]            = 1.0														# If MIX=0. then this will do it for all cells
 						materials[mat-1,i,j] = 1.0
 					elif abs(xc-A) <= np.sqrt(2) and mixed == True:					
 						xx = np.linspace(i,i+1,11)						
@@ -1018,31 +1023,34 @@ def fill_arbitrary_shape(X,Y,mat):
 
 	X, Y      : Vertices in cells
 	"""
-	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
+	global mesh, materials,meshx,meshy																	# Only the angles used are now randomly selected.
 	N      = np.size(X)
-	R      = np.zeros((2,N))																# Array for the coords of the vertices
+	R      = np.zeros((2,N))																			# Array for the coords of the vertices
 	x0,y0 = find_centroid(X,Y)
-	R[0,:] = X - x0															# Each vertex will also be successive, such that drawing a line between
-	R[1,:] = Y - y0														# each one in order, will result in no crossed lines.
-	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
-	qy = 0.																	# All dimensions are in reference to the central coordinates.
-	for j in range(meshy):																# Iterate through all the x- and y-coords
-		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
-			xc = 0.5*(i+(i+1))-x0												# Convert current coord to position relative to (x0,y0) 
-			yc = 0.5*(j+(j+1))-y0													# Everything is now in indices, with (x0,y0)
-			sx = xc - qx															# s = vector difference between current coord and ref coord
+	R[0,:] = X - x0																						# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y - y0																						# each one in order, will result in no crossed lines.
+	qx = 0.																								# Make the reference point (q) zero, i.e. the centre of the shape
+	qy = 0.																								# All dimensions are in reference to the central coordinates.
+	for j in range(meshy):																				# Iterate through all the x- and y-coords
+		for i in range(meshx):																			
+			xc = 0.5*(i+(i+1))-x0																		# Convert current coord to position relative to (x0,y0) 
+			yc = 0.5*(j+(j+1))-y0																		# Everything is now in indices, with (x0,y0)
+			sx = xc - qx																				# s = vector difference between current coord and ref coord
 			sy = yc - qy		
-			intersection = 0																# Initialise no. intersections as 0
-			for l in range(N-1):															# cycle through each edge, bar the last
-				rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+			intersection = 0																			# Initialise no. intersections as 0
+			for l in range(N-1):																		# cycle through each edge, bar the last
+				rx = R[0,l+1] - R[0,l]																	# Calculate vector of each edge (r), 
+																										# i.e. the line between the lth vertex and the l+1th vertex
 				ry = R[1,l+1] - R[1,l]
-				RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
-				if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+				RxS = (rx*sy-ry*sx)																		# Vector product of r and s (with z = 0), 
+																										# technically produces only a z-component
+				if RxS!=0.:																				# If r x s  = 0 then lines are parallel
 					t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
 					u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
 					if t<=1. and t>=0. and u<=1. and u>=0.:
 						intersection = intersection + 1
-			rx = R[0,0] - R[0,N-1]															# Do the last edge. Done separately to avoid needing a circular 'for' loop
+			rx = R[0,0] - R[0,N-1]																		# Do the last edge. 
+																										# Done separately to avoid needing a circular 'for' loop
 			ry = R[1,0] - R[1,N-1]
 			if (rx*sy-ry*sy)!=0.:
 				RxS = (rx*sy-ry*sx)
@@ -1050,7 +1058,8 @@ def fill_arbitrary_shape(X,Y,mat):
 				u = ((qx-R[0,N-1])*ry - (qy-R[1,N-1])*rx)/RxS
 				if t<=1. and t>=0. and u<=1. and u>=0.:
 					intersection = intersection + 1
-			if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+			if (intersection%2==0.):																	# If number of intersections is divisible by 2 (or just zero) 
+																										#-> fill that cell!
 				mesh[i,j]            = 1.0
 				materials[mat-1,i,j] = 1.0
 
@@ -1073,7 +1082,7 @@ def fill_arbitrary_shape_p(X,Y,mat):
 	qx = 0.																		# Make the reference point (q) zero, i.e. the centre of the shape
 	qy = 0.																		# All dimensions are in reference to the central coordinates.
 	for j in range(meshy):																# Iterate through all the x- and y-coords
-		print j
+		if (j/meshy)%10.<=.001: print 100.*j/meshy,"% done"
 		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
 			xc = 0.5*(i + i+1) - x0		
 			yc = 0.5*(j + j+1) - y0
@@ -1089,14 +1098,13 @@ def fill_arbitrary_shape_p(X,Y,mat):
 					u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS	
 					if t<=1. and t>=0. and u<=1. and u>=0.:
 						intersection = intersection + 1
-			if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
-				
+			if (intersection%2==0.):										# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
 				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
 				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
-				for I in range(10-1):
-					for J in range(10-1):							
-						xc = 0.5*(xx[I] + xx[I+1]) - x0		
-						yc = 0.5*(yy[J] + yy[J+1]) - y0
+				for I in range(10):
+					for J in range(10):							
+						xc = 0.5+xx[I] - x0		
+						yc = 0.5+yy[J] - y0
 						sx = xc - qx															# s = vector difference between current coord and ref coord
 						sy = yc - qy		
 						intersection = 0																# Initialise no. intersections as 0
@@ -1137,3 +1145,73 @@ def find_centroid(x,y):
 	Cx /= (6.*A)
 	Cy /= (6.*A)
 	return Cx,Cy
+
+def fill_arbitrary_shape_P(X,Y,mat):						
+	"""
+	Function to fill an arbitrary shape in the mesh based on arrays of vertices.
+	This version DOES partially fill cells.
+	"""
+	global mesh, materials,meshx,meshy												# Only the angles used are now randomly selected.
+	x0,y0  = find_centroid(X,Y)
+	N      = np.size(X)
+	X      = np.append(X,X[0])
+	Y      = np.append(Y,Y[0])
+	R      = np.zeros((2,N+1))																# Array for the coords of the vertices
+	R[0,:] = X - x0															# Each vertex will also be successive, such that drawing a line between
+	R[1,:] = Y - y0														# each one in order, will result in no crossed lines.
+																			# Convert into cartesian coords and store in R
+	for j in range(meshy):																# Iterate through all the x- and y-coords
+		if (j/meshy)%10.<=.001: print 100.*j/meshy,"% done"
+		for i in range(meshx):															# N-1 because we want the centres of each cell, and there are only N-1 of these!
+			sx  = np.array([i,i+1,i,i+1]) - x0		
+			sy  = np.array([j,j,j+1,j+1]) - y0		
+			intersection = 0																# Initialise no. intersections as 0
+			cross = 0
+			for l in range(N):															# cycle through each edge, bar the last
+				rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+				ry = R[1,l+1] - R[1,l]
+				RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+				kk = 0
+				nodes = 0
+				for item in RxS:
+					if item != 0: 
+						t = ((0.-R[0,l])*sy[kk] - (0.-R[1,l])*sx[kk])/item
+						u = ((0.-R[0,l])*ry - (0.-R[1,l])*rx)/item	
+						if t<=1. and t>=0. and u<=1. and u>=0.:
+							nodes += 1
+					kk += 1
+				if nodes == 4.: 
+					intersection += 1
+				elif nodes > 0.: 
+					cross += 1
+				else:
+					pass
+			if intersection % 2. == 0.:
+				mesh[i,j]			 = 1.0
+				materials[mat-1,i,j] = 1.0
+			elif cross > 0.:										# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+				xx = np.arange(i,i+1,.1)															# Create 2 arrays of 11 elements each and with divisions of 0.1
+				yy = np.arange(j,j+1,.1)															# Essentially this splits the cell into a mini-mesh of 10 x 10 mini cells
+				for I in range(10):
+					for J in range(10):							
+						xc = 0.5+xx[I] - x0		
+						yc = 0.5+yy[J] - y0
+						sx = xc																# s = vector difference between current coord and ref coord
+						sy = yc			
+						intersection = 0																# Initialise no. intersections as 0
+						for l in range(N):															# cycle through each edge, bar the last
+							rx = R[0,l+1] - R[0,l]										# Calculate vector of each edge (r), i.e. the line between the lth vertex and the l+1th vertex
+							ry = R[1,l+1] - R[1,l]
+							RxS = (rx*sy-ry*sx)															# Vector product of r and s (with z = 0), technically produces only a z-component
+							if RxS!=0.:																	# If r x s  = 0 then lines are parallel
+								t = ((0.-R[0,l])*sy - (0.-R[1,l])*sx)/RxS
+								u = ((0.-R[0,l])*ry - (0.-R[1,l])*rx)/RxS	
+								if t<=1. and t>=0. and u<=1. and u>=0.:
+									intersection = intersection + 1
+						if (intersection%2==0.):							# If number of intersections is divisible by 2 (or just zero) -> fill that cell!
+							mesh[i,j]            += (.1**2.)				
+							materials[mat-1,i,j] += (.1**2.)
+			else: 
+				pass
+
+	return
