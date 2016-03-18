@@ -98,6 +98,7 @@ def find_shock_front_2(imax,jmax,sfronts,jfronts,VY,YC,A_lim):
                     jfronts[i] = J
                 else:
                     jfronts[i] = j+1
+                break
             else:
                 pass
             j += 1
@@ -151,12 +152,14 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
         PBD          = 1
     								    # Shock front in the particle bed
     QUP = 0.
-    NN  = 0.                                             # No. cells used to calculate QUP, initialise as 1 in case NN = 0
+    NN  = 0.                                            # No. cells used to calculate QUP, initialise as 1 in case NN = 0
+    VY  = np.ma.masked_invalid(VY)
     if particle_bed == 1:
         for i in range(0,imax,1):
             j          = jfronts[i]					    # The jth position of the shock front for this column of 'i'
             posback[i] = sfronts[i]					    # And the starting point for this algorithm
             den_parts  = Den[i,j]					    # The density at the shock position
+            up_grad    = np.gradient(VY[i,j:])
             while posback[i] == sfronts[i]: 
     	        j     = min(j,jmax)					    # Failsafe in case algorithm reaches the end of the array
     	        den_1 = Den[i,j:(j+20)]
@@ -168,7 +171,8 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
     	            jback[i]    = j
     	        else:
     	            pass
-    	        j += 1
+                #if up_grad[j] <= up_grad[jfronts[i]]*.1: QUP = np.ma.mean(VY[i,j:j+10]) 
+                j += 1
             QUP += np.sum(VY[i,jfronts[i]:jback[i]])
             NN  += np.size(VY[i,jfronts[i]:jback[i]])
     
@@ -176,8 +180,10 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
     
     else:
        NN = 1.
-    
-    return QUP/NN,PBD,posback,jback
+    if NN == 0.: NN = 1. 
+    print QUP,NN,QUP/NN,PBD#,posback
+    QUP /= NN
+    return QUP#,PBD,posback,jback
 
 def hugoniot_point(QUP,YSF,TME):
     global t1,t2
@@ -189,6 +195,7 @@ def hugoniot_point(QUP,YSF,TME):
     
     #UP   = outlier_mean(up)
     UP = np.mean(up[1:])
+    UPSD = np.std(up[1:])
     US, intercept, other, things, too = stats.linregress(time[1:],sf[1:])
     US*=-1.
     UP*=-1.
@@ -207,7 +214,7 @@ def hugoniot_point(QUP,YSF,TME):
     plt.title('Shock Position - time')
     plt.show()
     """
-    return UP,US*1000,-intercept
+    return UP,US*1000,-intercept,UPSD
 
 def hugoniot_point_ND(QUP,YSF,TME,N):
     global t1,t2
@@ -219,7 +226,8 @@ def hugoniot_point_ND(QUP,YSF,TME,N):
     sf   = YSF[(YSF<(N*D))*(YSF>-1.)*(TME<t2)]					    # Shock front positions
     
     #UP   = outlier_mean(up)
-    UP = np.mean(up[1:])
+    UP   = np.mean(up[1:])
+    UPSD = np.std(up[1:])
     US, intercept, other, things, too = stats.linregress(time[1:],sf[1:])
     US*=-1.
     UP*=-1.
@@ -229,7 +237,7 @@ def hugoniot_point_ND(QUP,YSF,TME,N):
     plt.plot(TME,-1*YSF,linestyle=' ',marker='*')
     plt.plot(time,time*US-intercept,linestyle='-',marker='o')
     """
-    return UP,US*1000,-intercept
+    return UP,US*1000,-intercept,UPSD
     
 dir_0  = './Same_A_ESRFmethod'								     # Directory name for the output files
 dirs   = ['A-1.272','A-1.275','A-1.2770','A-1.2725']
@@ -238,17 +246,21 @@ psp.mkdir_p(dir_0+'/cmaps')
 
 N = 5
 
-UP = np.zeros((N))
-US = np.zeros((N))
+UP     = np.zeros((N))
+US     = np.zeros((N))
+UPSD_0 = np.zeros((N))
 
-UP_2 = np.zeros((N))
-US_2 = np.zeros((N))
+UP_2   = np.zeros((N))
+US_2   = np.zeros((N))
+UPSD_2 = np.zeros((N))
 
-UP_4 = np.zeros((N))
-US_4 = np.zeros((N))
+UP_4   = np.zeros((N))
+US_4   = np.zeros((N))
+UPSD_4 = np.zeros((N))
 
-UP_6 = np.zeros((N))
-US_6 = np.zeros((N))
+UP_6   = np.zeros((N))
+US_6   = np.zeros((N))
+UPSD_6 = np.zeros((N))
 
 III =0
 
@@ -329,9 +341,10 @@ for directory in dirs:
             TME[(t-1)/tintv]  = step.time*1.e6
             sf            = np.amin(sfronts)*-1.
             
-            QUP[(t-1)/tintv],PBD[(t-1)/tintv],posback,jback = calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den,VY) 
-            posback = np.maximum(sfronts,posback)	# Failsafe. The back of the bed should ALWAYS be behind the Shock Front
-            #AMAX = QUP[(t-1)/tintv]/2.
+            #QUP[(t-1)/tintv],posback,jback = calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den,VY) 
+            QUP[(t-1)/tintv] = calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den,VY) 
+            #posback = np.maximum(sfronts,posback)	# Failsafe. The back of the bed should ALWAYS be behind the Shock Front
+            #AMAX = QUP[(t-1)/tintv]*.9
             """
             if counter%5 == 0 and counter>0:
         	slope, intercept, other, things, too = stats.linregress(TME[t-4:t],YSF[t-4:t])
@@ -346,11 +359,11 @@ for directory in dirs:
         TME = TME[(YSF!=0.)]
         QUP = QUP[(YSF!=0.)]
         YSF = YSF[(YSF!=0.)]
-        UP[III],US[III],C_1 = hugoniot_point(QUP[:-1],YSF[:-1],TME[:-1])
-        UP_2[III],US_2[III],C_2 = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],2.)
-        UP_4[III],US_4[III],C_4 = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],4.)
-        UP_6[III],US_6[III],C_6 = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],6.)
-        plt.close()
+        UP[III],US[III],C_0,UPSD_0[III]     = hugoniot_point(QUP[:-1],YSF[:-1],TME[:-1])
+        UP_2[III],US_2[III],C_2,UPSD_2[III] = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],2.)
+        UP_4[III],US_4[III],C_4,UPSD_4[III] = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],4.)
+        UP_6[III],US_6[III],C_6,UPSD_6[III] = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],6.)
+        #plt.close()
         """
         plt.figure()
         plt.plot(Time, Us, linestyle=' ',marker = 'o', color = 'r')
@@ -369,7 +382,7 @@ for directory in dirs:
         
         plt.figure(figsize=(3.5,3.5))
         plt.plot(TME[1:],abs(YSF[1:]),linestyle=' ',marker = 'x',mew=1.5,color = 'm')
-        plt.plot(TME[1:],1.e-3*US[III]*TME[1:]+C_1,linestyle='-',color='k',label='0D')
+        plt.plot(TME[1:],1.e-3*US[III]*TME[1:]+C_0,linestyle='-',color='k',label='0D')
         plt.plot(TME[1:],1.e-3*US_2[III]*TME[1:]+C_2,linestyle=':',color='k',label='2D')
         plt.plot(TME[1:],1.e-3*US_4[III]*TME[1:]+C_4,linestyle='-.',color='k',label='4D')
         plt.plot(TME[1:],1.e-3*US_6[III]*TME[1:]+C_6,linestyle='--',color='k',label='6D')
@@ -393,14 +406,14 @@ for directory in dirs:
         plt.ylabel('Particle Velocity [ms$^{-1}$]')
         plt.legend(loc='best',fontsize='small')
         plt.savefig('./{}/{}_{}_QUP-TME.png'.format(dir_0,directory,modelS[III]),dpi=500,bbox_inches='tight')
-        plt.show()
+        #plt.show()
         plt.close()
     
         III += 1
     
     g = [2.,50.,1.5,400.]
     #up1,us1,up2,us2 = twoline_piecewise_fit(UP,US,g)
-    np.savetxt('./{}/{}/Up-Us_{}_original.csv'.format(dir_0,directory,directory),np.column_stack((UP,US,UP_2,US_2,UP_4,US_4,UP_6,US_6)),delimiter=',')
+    np.savetxt('./{}/{}/Up-Us_{}_original.csv'.format(dir_0,directory,directory),np.column_stack((UP,US,UP_2,US_2,UP_4,US_4,UP_6,US_6,UPSD_0,UPSD_2,UPSD_4,UPSD_6)),delimiter=',')
     plt.figure(figsize=(3.5,3.5))
     plt.plot(UP,US,linestyle=' ',marker='o',mew=1,markerfacecolor='None',label='all touching',ms=5)
     #plt.plot(up1,us1,up2,us2,color='k')
