@@ -153,7 +153,8 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
     								    # Shock front in the particle bed
     QUP = 0.
     NN  = 0.                                            # No. cells used to calculate QUP, initialise as 1 in case NN = 0
-    VY  = np.ma.masked_invalid(VY)
+    #VY  = np.ma.masked_invalid(VY)
+    #mesh = np.zeros_like(VY)
     if particle_bed == 1:
         for i in range(0,imax,1):
             j          = jfronts[i]					    # The jth position of the shock front for this column of 'i'
@@ -174,14 +175,25 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
                 #if up_grad[j] <= up_grad[jfronts[i]]*.1: QUP = np.ma.mean(VY[i,j:j+10]) 
                 j += 1
             QUP += np.sum(VY[i,jfronts[i]:jback[i]])
-            NN  += np.size(VY[i,jfronts[i]:jback[i]])
+            #mesh[i,jfronts[i]:jback[i]] += VY[i,jfronts[i]:jback[i]]
+            #mesh[mesh!=0.] = 1.0
+            #mesh[i,jfronts[i]] += 1.0
+            #mesh[i,jback[i]] += 1.0
+            NN  += np.ma.MaskedArray.count(VY[i,jfronts[i]:jback[i]])
     
         #QUP = np.mean(VY[(YC > np.amin(sfronts))*(YC < np.amax(posback))])  # Quasi UP. Measured as average behind slowest SF and fastest bit of driver.
     
     else:
        NN = 1.
     if NN == 0.: NN = 1. 
-    print QUP,NN,QUP/NN,PBD#,posback
+    
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.imshow(mesh,interpolation='nearest',cmap = 'inferno')
+    plt.show()
+    """
+    #print QUP,NN,QUP/NN,PBD#,posback
     QUP /= NN
     return QUP#,PBD,posback,jback
 
@@ -192,6 +204,7 @@ def hugoniot_point(QUP,YSF,TME):
     time = TME[(YSF<0.)*(YSF>-1.)*(TME<t2)]					    # Only use times and particle velocities for results WITHIN the particle bed
     up   = QUP[(YSF<0.)*(YSF>-1.)*(TME<t2)]					    # .8mm into the particle bed is given, for the shock to stabilise
     sf   = YSF[(YSF<0.)*(YSF>-1.)*(TME<t2)]					    # Shock front positions
+
     
     #UP   = outlier_mean(up)
     UP = np.mean(up[1:])
