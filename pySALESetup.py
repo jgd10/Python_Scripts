@@ -816,6 +816,55 @@ def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     ALL  = np.column_stack((MATS,X,Y,R))                                                
     np.savetxt(fname,ALL,comments='')
     return
+"""
+def view_mesoiSALE(filepath = 'meso.iSALE',save=False):
+   
+    INCOMPLETE This function allows you to view the arrangement a meso.iSALE file would produce
+    
+    M = np.genfromtxt(filepath,dtype=float,usecols=(0))
+    X = np.genfromtxt(filepath,dtype=float,usecols=(1))
+    Y = np.genfromtxt(filepath,dtype=float,usecols=(2))
+    R = np.genfromtxt(filepath,dtype=float,usecols=(3))
+    N = np.size(X)
+
+    fig = plt.figure()
+    ax  = fig.add_subplot(111,aspect='equal')
+    ax.set_ylim([np.amin(X)-np.amax(R),np.amax(X)+np.amax(R)])
+    ax.set_xlim([np.amin(Y)-np.amax(R),np.amax(Y)+np.amax(R)])
+    for i in range(N):																				# Plot each circle in turn
+        circle = plt.Circle((X[i],Y[i]),R[i],color='{:1.2f}'.format((M[i])*.5/np.amax(M)))  # give each one a color based on their material number. NB any color = 1. will be WHITE 
+        ax.add_patch(circle)
+    if save:
+        filepath=filepath.replace('.iSALE','.png')
+        plt.savefig(filepath,dpi=500)
+    plt.show()
+    return
+"""
+def view_meso_miSALE(filepath = 'meso_m.iSALE',save=False):
+    """
+    Ths function allows you to view the mesh a meso_m.iSALE file would produce
+    """
+    N,mats = np.genfromtxt(filepath,dtype=float,max_rows=1)
+    F = np.zeros(N,mats)
+    X    = np.genfromtxt(filepath,dtype=float,usecols=(0),skip_header=1)
+    Y    = np.genfromtxt(filepath,dtype=float,usecols=(1),skip_header=1)
+    for j in range(mats):
+        F[:,j] = np.genfromtxt(filepath,dtype=float,usecols=(2+j),skip_header=1)
+    Nx   = np.amax(X)
+    Ny   = np.amax(Y)
+    assert Nx*Ny == N
+    mesh = np.zeros(Nx,Ny)
+    for i in range(N):
+        mesh[X[i],Y[i]] = np.sum(F[i,:])
+    fig = plt.figure()
+    ax  = fig.add_subplot(111,aspect='equal')
+    ax.imshow(mesh,interpolation='nearest')
+    if save:
+        filepath=filepath.replace('.iSALE','.png')
+        plt.savefig(filepath,dpi=500)
+    plt.show()
+    return
+
 
 def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
     """
