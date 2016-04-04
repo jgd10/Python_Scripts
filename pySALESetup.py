@@ -807,11 +807,11 @@ def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     ALL  = np.column_stack((MATS,X,Y,R))                                                
     np.savetxt(fname,ALL,comments='')
     return
-"""
+
 def view_mesoiSALE(filepath = 'meso.iSALE',save=False):
-   
-    INCOMPLETE This function allows you to view the arrangement a meso.iSALE file would produce
-    
+    """
+    This function allows you to view the arrangement a meso.iSALE file would produce
+    """
     M = np.genfromtxt(filepath,dtype=float,usecols=(0))
     X = np.genfromtxt(filepath,dtype=float,usecols=(1))
     Y = np.genfromtxt(filepath,dtype=float,usecols=(2))
@@ -832,9 +832,9 @@ def view_mesoiSALE(filepath = 'meso.iSALE',save=False):
     return
 """
 def view_meso_miSALE(filepath = 'meso_m.iSALE',save=False):
-    """
-    Ths function allows you to view the mesh a meso_m.iSALE file would produce
-    """
+    
+    INCOMPLETE Ths function allows you to view the mesh a meso_m.iSALE file would produce
+    
     N,mats = np.genfromtxt(filepath,dtype=float,max_rows=1)
     F = np.zeros(N,mats)
     X    = np.genfromtxt(filepath,dtype=float,usecols=(0),skip_header=1)
@@ -855,7 +855,7 @@ def view_meso_miSALE(filepath = 'meso_m.iSALE',save=False):
         plt.savefig(filepath,dpi=500)
     plt.show()
     return
-
+"""
 
 def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
     """
