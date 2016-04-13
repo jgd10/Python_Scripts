@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X,Y,mat_no,CPPR=10,pr=0.,VF=.5,e = 0.):
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.):
 	"""
 	This function generates the global mesh that all particles will be inserted into.
 	Initially it reads in several parameters and renames them within the module. Then 
@@ -49,6 +49,35 @@ def generate_mesh(X,Y,mat_no,CPPR=10,pr=0.,VF=.5,e = 0.):
 	mesh_Shps = np.zeros((N,Ns,Ns))																		# Generate an array of meshes of this size. of size N (Ns x Ns x N)
 	FRAC      = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
 	OBJID     = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+
+def unit_cell(LX=None,LY=None):
+    global meshx,meshy,cppr_mid,Ms
+    if LX == None: LX = int(meshx/10) 
+    if LY == None: LY = int(meshy/10) 
+    UC = np.zeros((Ms,LX,LY))
+    return UC
+
+def copypasteUC(UC):
+    global meshx,meshy,materials
+    LX,LY = np.shape(UC[0,:,:])
+    i  = 0
+    ii = LX
+    while i < meshx:
+        j = 0
+        jj = LY
+        I = i + LX
+        if I > meshx: 
+            ii= abs(i - meshx)
+            I = meshx
+        while j < meshy:
+            J = j + LY
+            if J > meshy: 
+                jj = abs(j - meshy)
+                J  = meshy
+            materials[:,i:I,j:J] = UC[:,:ii,:jj]
+            j += LX
+        i += LY
+    return
 
 def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
 	"""
@@ -419,6 +448,10 @@ def insert_shape_into_mesh(shape,x0,y0):
 	
 	The area of the placed shape (it may not be the same as the original
 	if the shape is clipped) is returned and the global mesh is altered.
+
+    This differs from 'place shape' as it does not require the material number to be known
+    and is predominantly used when arranging particles, rather than 'placing them'(permanently)
+    at the final stage of particle bed construction.
 	"""
 	global mesh, meshx, meshy, cppr_max, materials
 	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
@@ -461,58 +494,64 @@ def insert_shape_into_mesh(shape,x0,y0):
 	area = np.sum(temp_shape)																			# Area is sum of all these points
 	return area
 
-def place_shape(shape,x0,y0,mat,obj):
-	"""
-	This function inserts the shape (passed as the array 'shape') into the
-	correct materials mesh at coordinate x0, y0.
-	
-	shape  : mesh0 array of the shape to be inserted
-	x0, y0 : The x and y coords at which the shape is to be placed. (These are the shape's origin point)
-	mat    : this is the index of the material
-	
-	This method relies on there being no particles of identical materials being in contact (i.e. no overlapping particles within the materials mesh)
-
-	nothing is returned.
-	"""
-	global mesh, meshx, meshy, cppr_max, materials
-	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
-	i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
-	j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
-	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
-																										# an extra cell is added either side
-	j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
-	
-	""" 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
-	if i_edge < 0:																						# Condition if the coords have the particle being generated 
-																										# over the mesh boundary
-		I_initial = abs(i_edge)																			# a negative starting index is reassigned to zero
-		i_edge    = 0																					# The polygon's mesh will not completely be in the main mesh 
-	else:																								# So I_initial defines the cut-off point
-		I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, 
-																										# then I_initial is just 0
-	if j_edge < 0:																						# Repeat for the j-coordinate
-		J_initial = abs(j_edge) 
-		j_edge = 0
-	else:
-		J_initial = 0
-	
-	I_final = Px 
-	if (i_finl)>meshx:																					# This section deals with the occurrence of the shape 
-																										# overlapping with the opposite ends of
-		I_final -= abs(meshx-i_finl)																	# meshes. And works on the same principles as above, 
-																										# although the maths is slightly different
-		i_finl   = meshx
-	J_final = Py
-	if (j_finl)>meshy:
-		J_final -= abs(meshy-j_finl) 
-		j_finl   = meshy
-	temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
-	materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
-	objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
-	objects_temp[objects_temp>0.]                = obj
-	objects[mat-1,i_edge:i_finl,j_edge:j_finl]   = objects_temp 
-	
-	return
+def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None):
+    """
+    This function inserts the shape (passed as the array 'shape') into the
+    correct materials mesh at coordinate x0, y0.
+    
+    shape  : mesh0 array of the shape to be inserted
+    x0, y0 : The x and y coords at which the shape is to be placed. (These are the shape's origin point)
+    mat    : this is the index of the material
+    
+    This method relies on there being no particles of identical materials being in contact (i.e. no overlapping particles within the materials mesh)
+    
+    nothing is returned.
+    """
+    global mesh, meshx, meshy, cppr_max, materials
+    if MATS == None: MATS = materials                                                                   # Now the materials mesh is only the default. Another mesh can be used!
+    if LX   == None: LX   = meshx                                                                       # The code should still work as before.
+    if LY   == None: LY   = meshy
+    Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
+    i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
+    j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
+    i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
+    																									# an extra cell is added either side
+    j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
+    
+    """ 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
+    if i_edge < 0:																						# Condition if the coords have the particle being generated 
+    																									# over the mesh boundary
+    	I_initial = abs(i_edge)																			# a negative starting index is reassigned to zero
+    	i_edge    = 0																					# The polygon's mesh will not completely be in the main mesh 
+    else:																								# So I_initial defines the cut-off point
+    	I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh, 
+    																									# then I_initial is just 0
+    if j_edge < 0:																						# Repeat for the j-coordinate
+    	J_initial = abs(j_edge) 
+    	j_edge = 0
+    else:
+    	J_initial = 0
+    
+    I_final = Px 
+    if (i_finl)>LX:		    																			# This section deals with the occurrence of the shape 
+    	    																							# overlapping with the opposite ends of
+    	I_final -= abs(LX-i_finl)							    										# meshes. And works on the same principles as above, 
+    																									# although the maths is slightly different
+    	i_finl   = LX
+    J_final = Py
+    if (j_finl)>LY:
+    	J_final -= abs(LY-j_finl) 
+    	j_finl   = LY
+    
+    temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
+    #materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
+    MATS[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
+    #objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
+    #objects_temp[objects_temp>0.]                = obj
+    #objects[mat-1,i_edge:i_finl,j_edge:j_finl]   = objects_temp 
+    # Objects mesh is no longer necessary and has been tentatively removed
+    
+    return
 														
 
 def gen_coord_basic():																					
