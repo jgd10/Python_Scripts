@@ -936,7 +936,7 @@ def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE'):
     np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
     return
 
-def save_general_mesh(fname='meso_m.iSALE'):
+def save_general_mesh(fname='meso_m.iSALE',mixed=True):
 	"""
 	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
 	This compiles the integer indices of each cell, as well as the material in them and the fraction
@@ -963,7 +963,7 @@ def save_general_mesh(fname='meso_m.iSALE'):
 			for mm in range(Ms):
 				FRAC[mm,K] = materials[mm,i,j]
 			K += 1
-	FRAC = check_FRACs(FRAC)
+	FRAC = check_FRACs(FRAC,mixed)
 	HEAD = '{},{}'.format(K,Ms)
 	ALL  = np.column_stack((XI,YI,FRAC.transpose()))							# ,OBJID.transpose())) Only include if particle number needed
     
@@ -1000,23 +1000,37 @@ def populate_from_bmp(A):
 	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
 	return
 
-def check_FRACs(FRAC):
-	"""
-	This function checks all the volume fractions in each cell and deals with any occurrences where they add to more than one
-	by scaling down ALL fractions in that cell, such that it is only 100% full.
-
-	FRAC : Array containing the full fractions in each cell of each material
-	"""
-
-	global Ms,meshx,meshy
-
-	for i in range(meshx*meshy):
-		SUM = np.sum(FRAC[:,i])
-		if SUM > 1.:
-			FRAC[:,i] /= SUM
-		else:
-			pass
-	return FRAC
+def check_FRACs(FRAC,mixed):
+    """
+    This function checks all the volume fractions in each cell and deals with any occurrences where they add to more than one
+    by scaling down ALL fractions in that cell, such that it is only 100% full.
+    
+    FRAC : Array containing the full fractions in each cell of each material
+    """
+    
+    global Ms,meshx,meshy
+    if mixed:
+        for i in range(meshx*meshy):
+        	SUM = np.sum(FRAC[:,i])
+        	if SUM > 1.:
+        		FRAC[:,i] /= SUM
+        	else:
+        		pass
+    else:
+        for i in range(meshx*meshy):
+            SUM = np.sum(FRAC[:,i])
+            if SUM > 1.:
+                done = False
+                for j in range(Ms):
+                    if FRAC[j,i] > 0 and done == False: 
+                        FRAC[j,i] = 1.
+                        done = True
+                    else:
+                        FRAC[j,i] = 0.
+        	else:
+        		pass
+    
+    return FRAC
 
 def fill_plate(y1,y2,mat,invert=False):
 	"""
