@@ -22,27 +22,25 @@ pss.generate_mesh(X_cells,Y_cells,mat_no,cppr,PR,vol_frac)
 mats = pss.mats
 
 part_area  = np.zeros((1))
-part_radii = []
 cppr_range = pss.cppr_max - pss.cppr_min
 r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
-part_radii.append(r)
 
-xcoords = []
-ycoords = []
-radii   = []
-I_shape = []
-J_shape = []
-lx, ly = 44, 44
+lx, ly = 64, 64
 UC = pss.unit_cell(LX=lx,LY=ly)
 
-#pss.place_shape(pss.mesh_Shps[0,:,:],0,0,1,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],11,11,2,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],22,22,3,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],33,33,4,UC,LX=lx,LY=ly)
-#pss.place_shape(pss.mesh_Shps[0,:,:],lx,lx,1,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],22,lx,1,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],lx-22,0,1,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],0,0,1,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],48,32+16,2,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],32,32-20,3,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],48,32-16,4,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],32,32+20,1,UC,LX=lx,LY=ly)
+
+
+pss.place_shape(pss.mesh_Shps[0,:,:],lx,0,1,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],0,ly,1,UC,LX=lx,LY=ly)
+pss.place_shape(pss.mesh_Shps[0,:,:],lx,ly,1,UC,LX=lx,LY=ly)
+
+
 
 plt.figure()
 plt.imshow(UC[0,:,:],interpolation='nearest',cmap='binary')
@@ -59,5 +57,9 @@ plt.imshow(pss.materials[2,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 plt.imshow(pss.materials[3,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 plt.show()
 
+S = float(np.sum(UC)-4*3)#There are 4 particles and 3 cells overlap per particle
+print "Approximate Volume Fraction = {:3.1f}".format(S/float(lx*ly))
+
+pss.save_general_mesh(mixed=False)
 
 
