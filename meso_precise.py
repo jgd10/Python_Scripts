@@ -27,28 +27,36 @@ r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
 
-TOT_Area   = cppr*2*pss.meshx
+ANGLE = 30
+ANGLE*= np.pi/180.
+
+TOT_Area   = (cppr*2)*pss.meshx
 No_per_row = TOT_Area*vol_frac/np.floor(np.pi*cppr**2.)
 Separation = np.floor(pss.meshx/No_per_row)
-print Separation
+di         = np.round(np.sqrt(Separation**2. + (cppr*2.)**2.))
+dj         = np.round(cppr*2*np.cos(ANGLE))
+dind       = np.round(2*cppr*np.sin(ANGLE))
+print dind
+# The Separation is only for the vert lines case. here we need it for the rotated case
+# and must rotate the separation appropriately
 
-phi   = 0   # Phase difference. Increments a little each row, to produce a variable orientation
-theta = 0
 M     = 0
-j     = -cppr
-J = j + theta
-i = -cppr
-k = 0
+j     = cppr
+ind_i = np.arange(0,pss.meshx,di)
+N = np.size(ind_i)
+#ind_i = np.append(ind_i,ind_i[-1]+Separation)
 while j < pss.meshy+cppr:
-    i = 0
-    while i < pss.meshx+cppr:
-        if k%15 == 0:
-            pss.place_shape(pss.mesh_Shps[0,:,:],j,i,M)
-            M += 1
-            if M > 4: M = 0
-        i += 1
-        k += 1
-    j   += cppr*2.
+    for item in ind_i:
+        if item>-cppr and item < pss.meshx+cppr:
+            pss.place_shape(pss.mesh_Shps[0,:,:],j,item,M)
+        M += 1
+        if M > 4: M = 0
+    ind_i += dind
+    for k in range(N-1,-1,-1):
+        if ind_i[k] > (pss.meshx): 
+            ind_i[k] = ind_i[0] - di
+            ind_i = np.roll(ind_i,1)
+    j   += dj
 
 
 
