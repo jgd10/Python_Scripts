@@ -51,4 +51,3 @@ A,B = pss.part_distance(xcoords,ycoords,radii,MAT,plot=True)
 pss.save_spherical_parts(xcoords,ycoords,radii,MAT,A)
 pss.view_mesoiSALE(filepath='meso_A-{:3.4f}.iSALE'.format(A))
 
-
