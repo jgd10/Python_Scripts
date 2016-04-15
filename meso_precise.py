@@ -27,7 +27,7 @@ r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
 
-ANGLE = 30
+ANGLE = 0
 ANGLE*= np.pi/180.
 
 TOT_Area   = (cppr*2)*pss.meshx
@@ -45,10 +45,16 @@ j     = cppr
 ind_i = np.arange(0,pss.meshx,di)
 N = np.size(ind_i)
 #ind_i = np.append(ind_i,ind_i[-1]+Separation)
+xc     = []
+yc     = []
+radii  = []
 while j < pss.meshy+cppr:
     for item in ind_i:
         if item>-cppr and item < pss.meshx+cppr:
             pss.place_shape(pss.mesh_Shps[0,:,:],j,item,M)
+            xc.append(j)
+            yc.append(item)
+            radii.append(r)
         M += 1
         if M > 4: M = 0
     ind_i += dind
