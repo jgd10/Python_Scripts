@@ -928,7 +928,8 @@ def particle_gap_measure(filepath = 'meso.iSALE',plot=False):
             ax.plot([X[i]],[Y[i]],color='k',marker='x',linestyle=' ',ms=3,mew=1.)
     
     for i in range(N-1):
-        old_dy = Y[i] - np.amin(Y)
+        best_dy = Y[i] - np.amin(Y)
+        old_dy  = best_dy
         best_X = X[i] 
         best_Y = np.amin(Y) 
         old_X  = best_X
@@ -960,6 +961,7 @@ def particle_gap_measure(filepath = 'meso.iSALE',plot=False):
             if plot == True:
                 ax.plot([X[i],best_X],[Y[i],best_Y],lw=1.,color='b')
     Dgap  = np.array(Dgap)			                                                                 # Convert to numpy array
+    Dgap -= 2                                                                                           # Now Dgap is the distance between parts and NOT centres
      
     G = np.mean(Dgap)																 # The size of Dtouch/total part number is the mean
     																									 # gap length, in radii
