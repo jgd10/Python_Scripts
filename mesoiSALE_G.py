@@ -46,7 +46,9 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
             if i == j:
                 pass
             elif X[j] < UB[i] and X[j] > LB[i] and Y[j] < Y[i]:                                            # Only consider particles within the critical arc
-                dy = abs(Y[j] - Y[i]) #- R[i] - R[j]                                                         # And ones below the current particle
+                dX = abs(X[j] - X[i])
+                dY = abs(Y[j] - Y[i]) #- R[i] - R[j]                                                         # And ones below the current particle
+                dy = np.sqrt(dX**2. + dY**2.)
                 if dy < old_dy: 
                     best_dy = dy
                     best_X  = X[j]
