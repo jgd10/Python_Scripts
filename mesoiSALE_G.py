@@ -71,7 +71,7 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
     Dgap  = np.array(Dgap)			                                                                 # Convert to numpy array
     Dgap -= 2                                                                                           # Now Dgap is the distance between parts and NOT centres
      
-    G = np.mean(Dgap)																 # The size of Dtouch/total part number is the mean
+    G = np.sum(Dgap)/N																 # The size of Dtouch/total part number is the mean
     																									 # gap length, in radii
     if plot == True: 
     	ax.set_title('$G = ${:1.3f} radii'.format(G))
