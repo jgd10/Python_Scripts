@@ -57,11 +57,15 @@ def unit_cell(LX=None,LY=None):
     UC = np.zeros((Ms,LX,LY))
     return UC
 
-def copypasteUC(UC):
+def copypasteUC(UC,UCX,UCY,RAD,MATS):
     global meshx,meshy,materials
     LX,LY = np.shape(UC[0,:,:])
     i  = 0
     ii = LX
+    xcoords = np.copy(UCX)
+    ycoords = np.copy(UCY)
+    mats    = np.copy(MATS)
+    rad     = np.copy(RAD)
     while i < meshx:
         j = 0
         jj = LY
@@ -75,9 +79,25 @@ def copypasteUC(UC):
                 jj = abs(j - meshy)
                 J  = meshy
             materials[:,i:I,j:J] = UC[:,:ii,:jj]
+            ycoords = np.append(ycoords,UCY+i)
+            xcoords = np.append(xcoords,UCX+j)
+            mats    = np.append(mats,MATS)
+            rad     = np.append(rad,RAD)
             j += LX
         i += LY
-    return
+    R = np.mean(rad)
+    xc       = xcoords[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    yc       = ycoords[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    rads     =     rad[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    mat      =    mats[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    coords   = np.column_stack((mat,xc,yc,rads))
+
+    coords = np.vstack({tuple(row) for row in coords})
+
+    #c,indices = np.unique(coords,return_index = True)
+    #print xcoords
+    #coords = coords[indices]
+    return coords[:,0],coords[:,1],coords[:,2],coords[:,3]
 
 def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
 	"""
@@ -544,8 +564,10 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None):
     	j_finl   = LY
     
     temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
-    #materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
-    MATS[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
+    if MATS == None:
+        materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
+    else:
+        MATS[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
     #objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
     #objects_temp[objects_temp>0.]                = obj
     #objects[mat-1,i_edge:i_finl,j_edge:j_finl]   = objects_temp 
@@ -795,9 +817,9 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	if plot == True:																					# If plot == True then produce a figure
 	    fig = plt.figure()
 	    ax = fig.add_subplot(111,aspect='equal')
-	    ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic 
+        ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic 
 																										# matches the mesh in orientation
-	    ax.set_ylim(meshx*GRIDSPC,0)
+        ax.set_ylim(meshx*GRIDSPC,0)
         for i in range(N):																				# Plot each circle in turn
             ax.plot([X[i]],[Y[i]],color='k',marker='o',linestyle=' ',ms=3)
         #    circle = plt.Circle((X[i],Y[i]),radii[i],color='{:1.2f}'.format((MAT[i])*.5/np.amax(MAT)))  # give each one a color based on their material number. 
