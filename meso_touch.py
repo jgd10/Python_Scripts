@@ -167,8 +167,6 @@ print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
-pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)
-print 'save to meso_m.iSALE'
 pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
 print 'save to meso_A-{:3.4f}.iSALE'.format(A)
 
