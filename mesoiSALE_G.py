@@ -17,10 +17,11 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
     crit_angle  = 40                                                                                    # The angle after which Force chains no longer propagate
     crit_angle *= np.pi/180.                                                                            # i.e. they are pushed out the way (need in radians)
     mean_radii  = np.mean(R)																		    # Calculate the mean radii	
+    rad_err     = .1+2.                                                                                 # 10% uncertainty on radius 
     D           = np.zeros((N))																			# D is an array for the distances between particles
     Dgap        = []																					# The final list of distances for parts in contact
-    UB          = X + R*np.sin(crit_angle)                                                              # Check all particles below, within this window
-    LB          = X - R*np.sin(crit_angle)                                                              # that is within the critical angle arc
+    UB          = X + 2.*R*np.sin(crit_angle)                                                              # Check all particles below, within this window
+    LB          = X - 2.*R*np.sin(crit_angle)                                                              # that is within the critical angle arc
 
     X /= R
     Y /= R
@@ -30,22 +31,22 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
     if plot == True:																					# If plot == True then produce a figure
         fig = plt.figure()
         ax = fig.add_subplot(111,aspect='equal')
-        ax.set_xlim(np.amin(X),np.amax(X))
-        ax.set_ylim(np.amin(Y),np.amax(Y))
+        ax.set_xlim(0,np.amax(X))
+        ax.set_ylim(np.amax(Y),0)
         for i in range(N):																				# Plot each circle in turn
             ax.plot([X[i]],[Y[i]],color='k',marker='x',linestyle=' ',ms=3,mew=1.)
     
-    for i in range(N-1):
-        best_dy = Y[i] - np.amin(Y)
+    for i in range(N):
+        best_dy = np.amax(Y) - Y[i]
         old_dy  = best_dy
         best_X = X[i] 
-        best_Y = np.amin(Y) 
+        best_Y = np.amax(Y) 
         old_X  = best_X
         old_Y  = best_Y
-        for j in range(N-1):	# find distances between current particle and 
+        for j in range(N):	# find distances between current particle and 
             if i == j:
                 pass
-            elif X[j] < UB[i] and X[j] > LB[i] and Y[j] < Y[i]:                                            # Only consider particles within the critical arc
+            elif X[j] < UB[i] and X[j] > LB[i] and Y[j] > Y[i]:                                            # Only consider particles within the critical arc
                 dX = abs(X[j] - X[i])
                 dY = abs(Y[j] - Y[i]) #- R[i] - R[j]                                                         # And ones below the current particle
                 dy = np.sqrt(dX**2. + dY**2.)
@@ -63,7 +64,7 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
             else:
                 pass
         D[i] = best_dy 
-        if best_dy <= 2.:
+        if best_dy <= rad_err:
             if plot == True:
                 ax.plot([X[i],best_X],[Y[i],best_Y],lw=1.5,color='r')
         else:
