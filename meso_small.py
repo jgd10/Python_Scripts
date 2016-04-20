@@ -8,8 +8,8 @@ import time
 
 
 vol_frac   = .55
-X_cells    = 50 
-Y_cells    = 50 
+X_cells    = 56 
+Y_cells    = 56 
 PR         = 0.
 cppr       = 8 
 vfraclimit = .495                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
@@ -26,19 +26,21 @@ cppr_range = pss.cppr_max - pss.cppr_min
 r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
-ANGLE = 90
+ANGLE = 60
 ANG   = ANGLE*np.pi/180.
 
-pss.place_shape(pss.mesh_Shps[0,:,:],0,25,0)
-pss.place_shape(pss.mesh_Shps[0,:,:],16,25,1)
+pss.place_shape(pss.mesh_Shps[0,:,:],0,28,0)
+pss.place_shape(pss.mesh_Shps[0,:,:],16,28,1)
 
 dX = 2*cppr*np.sin(ANG)
 dY = 2*cppr*np.cos(ANG) 
-pss.place_shape(pss.mesh_Shps[0,:,:],16+dY,25+dX,2)
+pss.place_shape(pss.mesh_Shps[0,:,:],16+dY,28+dX,2)
+pss.place_shape(pss.mesh_Shps[0,:,:],32+dY,28+dX,3)
+pss.place_shape(pss.mesh_Shps[0,:,:],32+dY,28+dX-16,4)
 
-pss.place_shape(pss.mesh_Shps[0,:,:],50,25,3)
-pss.place_shape(pss.mesh_Shps[0,:,:],50,41,4)
-pss.place_shape(pss.mesh_Shps[0,:,:],50,9,2)
+#pss.place_shape(pss.mesh_Shps[0,:,:],50,25,3)
+#pss.place_shape(pss.mesh_Shps[0,:,:],50,41,4)
+#pss.place_shape(pss.mesh_Shps[0,:,:],50,9,2)
 
 
 
