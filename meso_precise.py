@@ -27,7 +27,7 @@ r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
 
-ANGLE = 0
+ANGLE = 20
 ANGLE*= np.pi/180.
 
 TOT_Area   = (cppr*2)*pss.meshx
@@ -48,13 +48,15 @@ N = np.size(ind_i)
 xc     = []
 yc     = []
 radii  = []
+mats   = []
 while j < pss.meshy+cppr:
     for item in ind_i:
         if item>-cppr and item < pss.meshx+cppr:
             pss.place_shape(pss.mesh_Shps[0,:,:],j,item,M)
-            xc.append(j)
-            yc.append(item)
+            yc.append(j)
+            xc.append(item)
             radii.append(r)
+            mats.append(M)
         M += 1
         if M > 4: M = 0
     ind_i += dind
@@ -64,7 +66,10 @@ while j < pss.meshy+cppr:
             ind_i = np.roll(ind_i,1)
     j   += dj
 
-
+mats = np.array(mats)
+radii = np.array(radii)
+xc = np.array(xc)
+yc = np.array(yc)
 
 
 
@@ -77,6 +82,8 @@ plt.imshow(pss.materials[3,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 plt.imshow(pss.materials[4,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 plt.show()
 
+A,B = pss.part_distance(xc,yc,radii,mats,True)
+pss.save_spherical_parts(xc,yc,radii,mats,A)
 #S = float(np.sum(UC)-4*3)#There are 4 particles and 3 cells overlap per particle
 #print "Approximate Volume Fraction = {:3.1f}".format(S/float(lx*ly))
 
