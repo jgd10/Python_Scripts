@@ -20,7 +20,7 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
     rad_err     = .1+2.                                                                                 # 10% uncertainty on radius 
     D           = np.zeros((N))																			# D is an array for the distances between particles
     Dgap        = []																					# The final list of distances for parts in contact
-    Dbridge     = []																					# The final list of distances for parts in contact
+    Dtotal      = []																					# The final list of distances for parts in contact
     UB          = X + 2.*R*np.sin(crit_angle)                                                              # Check all particles below, within this window
     LB          = X - 2.*R*np.sin(crit_angle)                                                              # that is within the critical angle arc
 
@@ -66,27 +66,29 @@ def particle_gap_measure(A,filepath = 'meso.iSALE',plot=False):
                 pass
         D[i] = best_dy 
         if best_dy <= rad_err:
-            Dbridge.append(D[i])
+            Dtotal.append(D[i])
             if plot == True:
                 ax.plot([X[i],best_X],[Y[i],best_Y],lw=1.5,color='r')
         else:
             Dgap.append(D[i])
-            Dbridge.append(2.)
-			# For every gap, the shock will cross 2 radii of particle. this is subtracted from Dgap later
+            Dtotal.append(D[i])
             if plot == True:
                 ax.plot([X[i],best_X],[Y[i],best_Y],lw=1.,color='b')
     Dgap  = np.array(Dgap)			                                                                 # Convert to numpy array
     Dgap -= 2                                                                                           # Now Dgap is the distance between parts and NOT centres
      
     #G = np.sum(Dgap)/N																 # The size of Dtouch/total part number is the mean
-    G = np.mean(Dgap)																									 # gap length, in radii
-    L = np.mean(Dbridge)
-    K = L/G
+    if np.size(Dgap) == 0:
+        G = 0
+    else:
+        G = np.sum(Dgap)																									 # gap length, in radii
+    L = np.sum(Dtotal)
+    K = G/L * 100.
     if plot == True: 
-    	ax.set_title('$K = ${:1.3f} '.format(K))
+    	ax.set_title('$K = ${:1.3f}% '.format(K))
         ax.set_xlabel('Transverse Position [Radii]')
         ax.set_ylabel('Longitudinal Position [Radii]')
-        plt.savefig('gaps_figure_A-{}_K-{:1.3f}.png'.format(A,K),dpi=600)		                				 # Save the figure
+        plt.savefig('gaps_figure_A-{}_K-{:1.3f}percent.png'.format(A,K),dpi=600)		                				 # Save the figure
     	plt.show()
     return K
 
