@@ -27,7 +27,7 @@ r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
 
-ANGLE = 20
+ANGLE = 30
 ANGLE*= np.pi/180.
 
 TOT_Area   = (cppr*2)*pss.meshx
