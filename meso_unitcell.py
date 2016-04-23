@@ -26,13 +26,13 @@ cppr_range = pss.cppr_max - pss.cppr_min
 r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
-lx, ly = 64., 64.
+lx, ly = 48., 48.
 UC = pss.unit_cell(LX=lx,LY=ly)
-N  = 8
-UCX  = np.array([0.,32.+16.,32.-20.,32.-16.,32.+20.,0.,ly,ly])
-UCY  = np.array([0.,48.,32.,48.,32.,lx,0.,lx])
-MATS = np.array([1.,2.,3.,4.,1.,1.,1.,1.])
-RAD  = np.array([8.,8.,8.,8.,8.,8.,8.,8.])
+N  = 10
+UCX  = np.array([0.,2.*lx/3.,lx/3.,lx,lx/2.,lx/2.,0,0,lx,lx])
+UCY  = np.array([ly/2.,   ly/3.,      2.*ly/3.,ly/2.,0,ly,ly,0,ly,0])
+MATS = np.array([1.,2.,4.,1.,3.,3.,4.,4.,4.,4.])
+RAD  = np.array([8.,8.,8.,8.,8.,8.,8.,8.,8.,8.])
 
 for i in range(N):
     pss.place_shape(pss.mesh_Shps[0,:,:],UCY[i],UCX[i],MATS[i],UC,LX=lx,LY=ly)
