@@ -12,7 +12,7 @@ X_cells    = 500
 Y_cells    = 500 
 PR         = 0.
 cppr       = 8 
-vfraclimit = .495                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+vfraclimit = .2                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
