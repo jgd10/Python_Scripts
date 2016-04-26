@@ -13,22 +13,28 @@ def Dstra_1(A,filepath = 'meso.iSALE',plot=False):
     X = np.genfromtxt(filepath,dtype=float,usecols=(1))
     Y = np.genfromtxt(filepath,dtype=float,usecols=(2))
     R = np.genfromtxt(filepath,dtype=float,usecols=(3))
-    N = np.size(X)
-    
-    crit_angle  = 40                                                                                    # The angle after which Force chains no longer propagate
-    crit_angle *= np.pi/180.                                                                            # i.e. they are pushed out the way (need in radians)
-    mean_radii  = np.mean(R)																		    # Calculate the mean radii	
-    rad_err     = .1+2.                                                                                 # 10% uncertainty on radius 
-    
-    graph    = np.zeros((N,N))
-    gapgraph = np.zeros((N,N))
     indices = np.argsort(Y)
     
     Y  = Y[indices]/R
     X  = X[indices]/R
     R  = R[indices]/R
+    Xx = X[(X>0)*(Y>0)]
+    Yy = Y[(X>0)*(Y>0)]
+    R  = R[(X>0)*(Y>0)]
+    X  = np.copy(Xx)
+    Y  = np.copy(Yy)
+    crit_angle  = 40                                                                                    # The angle after which Force chains no longer propagate
+    crit_angle *= np.pi/180.                                                                            # i.e. they are pushed out the way (need in radians)
+    mean_radii  = np.mean(R)																		    # Calculate the mean radii	
+    rad_err     = .1+2.                                                                                 # 10% uncertainty on radius 
     UB = X + 2.*R*np.sin(crit_angle)                                                              # Check all particles below, within this window
     LB = X - 2.*R*np.sin(crit_angle)                                                              # that is within the critical angle arc
+    
+    N = np.size(X)
+    
+    
+    graph    = np.zeros((N,N))
+    gapgraph = np.zeros((N,N))
     for i in range(N):
         count = 0
         for j in range(N):
@@ -82,19 +88,23 @@ def Dstra_1(A,filepath = 'meso.iSALE',plot=False):
         ax.set_ylim([np.amin(X)-np.amax(R),np.amax(X)+np.amax(R)])
         ax.set_xlim([np.amin(Y)-np.amax(R),np.amax(Y)+np.amax(R)])
         for i in range(N):																				# Plot each circle in turn
-            circle = plt.Circle((X[i],Y[i]),R[i],color='{:1.2f}'.format((M[i])*.5/np.amax(M))) 
+            circle = plt.Circle((X[i],Y[i]),R[i],color='k',fill=False)#'{:1.2f}'.format((M[i])*.5/np.amax(M))) 
             ax.add_patch(circle)
         ax.set_xlim(0,np.amax(X))
         ax.set_ylim(np.amax(Y),0)
     
     	for o in range(nn):
-    	    ax.plot([X[start[o]],X[end[o]]],[Y[start[o]],Y[end[o]]],marker='o',color='c')
+    	    ax.plot([X[start[o]],X[end[o]]],[Y[start[o]],Y[end[o]]],marker='x',mew=2.,ms=4,color='k',lw=2.,linestyle=' ')
             ii = end[o]
             steps = 0
+            II = ii
             while ii != start[o]:
                 steps += 1
-                ax.plot(X[ii],Y[ii],marker='x',mew=2,ms=5,color='r')
+                #ax.plot(X[ii],Y[ii],marker='x',mew=2,ms=5,color='r')
+                ax.plot([X[II],X[ii]],[Y[II],Y[ii]],color='k',lw=1.5)
+                II = ii
                 ii = predG[start[o],ii]
+            ax.plot([X[II],X[ii]],[Y[II],Y[ii]],color='k',lw=1.5)
     
         ax.set_xlabel('Transverse Position [Radii]')
         ax.set_ylabel('Longitudinal Position [Radii]')
