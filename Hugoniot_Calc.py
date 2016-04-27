@@ -82,7 +82,8 @@ def find_shock_front(imax,jmax,sfronts,jfronts,Pre,YC):
 	    else:
 		pass
 	    j += 1
-    SF = np.mean(sfronts)						    # Shock Front position, as a mean of all the shock fronts in j
+    #SF = np.mean(sfronts)						    # Shock Front position, as a mean of all the shock fronts in j
+    SF = np.median(sfronts)						    # Shock Front position, as a median of all the shock fronts in j
 
     return sfronts, jfronts, SF
 
@@ -174,7 +175,12 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
     	            pass
                 #if up_grad[j] <= up_grad[jfronts[i]]*.1: QUP = np.ma.mean(VY[i,j:j+10]) 
                 j += 1
-            QUP += np.sum(VY[i,jfronts[i]:jback[i]])
+            ss   = np.ma.MaskedArray.count(VY[i,jfronts[i]:jback[i]]) 
+            if ss == 0:
+                QUP += 0
+            else:
+                QUP += np.ma.sum(VY[i,jfronts[i]:jback[i]])
+            #print i,QUP
             #mesh[i,jfronts[i]:jback[i]] += VY[i,jfronts[i]:jback[i]]
             #mesh[mesh!=0.] = 1.0
             #mesh[i,jfronts[i]] += 1.0
@@ -193,7 +199,7 @@ def calc_postshock_PBD_state(SF,particle_bed,YC,imax,jfronts,sfronts,posback,Den
     ax.imshow(mesh,interpolation='nearest',cmap = 'inferno')
     plt.show()
     """
-    #print QUP,NN,QUP/NN,PBD#,posback
+    #print QUP,NN,QUP/NN#,posback
     QUP /= NN
     return QUP#,PBD,posback,jback
 
@@ -207,8 +213,8 @@ def hugoniot_point(QUP,YSF,TME):
 
     
     #UP   = outlier_mean(up)
-    UP = np.mean(up[1:])
-    UPSD = np.std(up[1:])
+    UP   = np.ma.mean(up[1:])
+    UPSD = np.ma.std(up[1:])
     US, intercept, other, things, too = stats.linregress(time[1:],sf[1:])
     US*=-1.
     UP*=-1.
@@ -239,8 +245,8 @@ def hugoniot_point_ND(QUP,YSF,TME,N):
     sf   = YSF[(YSF<(N*D))*(YSF>-1.)*(TME<t2)]					    # Shock front positions
     
     #UP   = outlier_mean(up)
-    UP   = np.mean(up[1:])
-    UPSD = np.std(up[1:])
+    UP   = np.ma.mean(up[1:])
+    UPSD = np.ma.std(up[1:])
     US, intercept, other, things, too = stats.linregress(time[1:],sf[1:])
     US*=-1.
     UP*=-1.
@@ -253,7 +259,8 @@ def hugoniot_point_ND(QUP,YSF,TME,N):
     return UP,US*1000,-intercept,UPSD
     
 dir_0  = './Same_A_ESRFmethod'								     # Directory name for the output files
-dirs   = ['A-1.272','A-1.275','A-1.2770','A-1.2725']
+dirs   = ['A-3.5321_K-14','ORDERED_A-1.9347_rot-.5pi']
+#dirs = dirs[::-1]
 psp.mkdir_p(dir_0)
 psp.mkdir_p(dir_0+'/cmaps')
 
@@ -376,6 +383,7 @@ for directory in dirs:
         UP_2[III],US_2[III],C_2,UPSD_2[III] = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],2.)
         UP_4[III],US_4[III],C_4,UPSD_4[III] = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],4.)
         UP_6[III],US_6[III],C_6,UPSD_6[III] = hugoniot_point_ND(QUP[:-1],YSF[:-1],TME[:-1],6.)
+        print UP[III],UP_2[III],UP_4[III],UP_6[III]
         #plt.close()
         """
         plt.figure()
@@ -426,7 +434,7 @@ for directory in dirs:
     
     g = [2.,50.,1.5,400.]
     #up1,us1,up2,us2 = twoline_piecewise_fit(UP,US,g)
-    np.savetxt('./{}/{}/Up-Us_{}_original.csv'.format(dir_0,directory,directory),np.column_stack((UP,US,UP_2,US_2,UP_4,US_4,UP_6,US_6,UPSD_0,UPSD_2,UPSD_4,UPSD_6)),delimiter=',')
+    np.savetxt('./{}/{}/Up-Us_{}.csv'.format(dir_0,directory,directory),np.column_stack((UP,US,UP_2,US_2,UP_4,US_4,UP_6,US_6,UPSD_0,UPSD_2,UPSD_4,UPSD_6)),delimiter=',')
     plt.figure(figsize=(3.5,3.5))
     plt.plot(UP,US,linestyle=' ',marker='o',mew=1,markerfacecolor='None',label='all touching',ms=5)
     #plt.plot(up1,us1,up2,us2,color='k')
