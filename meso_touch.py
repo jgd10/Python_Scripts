@@ -7,12 +7,12 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .55
+vol_frac   = .65
 X_cells    = 500 
 Y_cells    = 500 
 PR         = 0.
 cppr       = 8 
-vfraclimit = .495                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+vfraclimit = .0                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
@@ -72,7 +72,7 @@ ycoords = []
 radii   = []
 I_shape = []
 J_shape = []
-
+old_vfrac = 0.
 try:
     while vol_placed_frac<vol_frac:                        # Keep attempting to add particles until the required volume fraction is achieved
         if J == 0:                                    # FIRST PARTICLE must ALWAYS be randomly placed
@@ -90,7 +90,7 @@ try:
             I_shape.append(I)
             J_shape.append(J)
     
-        if vol_placed_frac < vfraclimit*vol_frac:
+        elif vol_placed_frac < vfraclimit*vol_frac:
             if ii >= MM: ii = 0
             I = random.randint(nmin,nmax)                    # Generate a random number to randomly select one of the generated shapes, to be tried for this loop
             fail = 1
@@ -120,6 +120,12 @@ try:
         
         #print placed_part_area,np.sum(placed_part_area)# After it reaches 50%, the algorithm really slows, so output the results of each step to see progress
         vol_placed_frac = np.sum(placed_part_area)/(pss.meshx*pss.meshy)    # update the volume fraction
+        if vol_placed_frac == old_vfrac: 
+            print '##########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##########'
+            print '# volume fraction no longer increasing. Break here #'
+            print '##########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##########'
+            break
+        old_vfrac = vol_placed_frac
         print "volume fraction achieved so far: {:3.3f}%".format(vol_placed_frac*100)
         
 except KeyboardInterrupt:
@@ -158,17 +164,12 @@ zcr     *= GRIDSPC
 radii   *= GRIDSPC
 
 
-
-
-
 A,B = pss.part_distance(xcr,ycr,radii,MAT,True)
 print "The Contacts Measure, A = {}".format(A)
 print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
-pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)
-print 'save to meso_m.iSALE'
 pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
 print 'save to meso_A-{:3.4f}.iSALE'.format(A)
 

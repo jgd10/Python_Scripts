@@ -26,19 +26,27 @@ cppr_range = pss.cppr_max - pss.cppr_min
 r = pss.cppr_mid
 pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
 
-lx, ly = 64, 64
+lx, ly = 48., 48.
 UC = pss.unit_cell(LX=lx,LY=ly)
+N  = 10
+UCX  = np.array([0.,2.*lx/3.,lx/3.,lx,lx/2.,lx/2.,0,0,lx,lx])
+UCY  = np.array([ly/2.,   ly/3.,      2.*ly/3.,ly/2.,0,ly,ly,0,ly,0])
+MATS = np.array([1.,2.,4.,1.,3.,3.,4.,4.,4.,4.])
+RAD  = np.array([8.,8.,8.,8.,8.,8.,8.,8.,8.,8.])
 
-pss.place_shape(pss.mesh_Shps[0,:,:],0,0,1,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],48,32+16,2,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],32,32-20,3,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],48,32-16,4,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],32,32+20,1,UC,LX=lx,LY=ly)
+for i in range(N):
+    pss.place_shape(pss.mesh_Shps[0,:,:],UCY[i],UCX[i],MATS[i],UC,LX=lx,LY=ly)
+
+#pss.place_shape(pss.mesh_Shps[0,:,:],0,0,1,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],48,32+16,2,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],32,32-20,3,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],48,32-16,4,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],32,32+20,1,UC,LX=lx,LY=ly)
 
 
-pss.place_shape(pss.mesh_Shps[0,:,:],lx,0,1,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],0,ly,1,UC,LX=lx,LY=ly)
-pss.place_shape(pss.mesh_Shps[0,:,:],lx,ly,1,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],lx,0,1,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],0,ly,1,UC,LX=lx,LY=ly)
+#pss.place_shape(pss.mesh_Shps[0,:,:],lx,ly,1,UC,LX=lx,LY=ly)
 
 
 
@@ -48,8 +56,7 @@ plt.imshow(UC[1,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 plt.imshow(UC[2,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 plt.imshow(UC[3,:,:],interpolation='nearest',cmap='binary',alpha=.5)
 
-pss.copypasteUC(UC)
-
+Ms,xcoords,ycoords,radii = pss.copypasteUC(UC,UCX,UCY,RAD,MATS)
 plt.figure()
 plt.imshow(pss.materials[0,:,:],interpolation='nearest',cmap='binary')
 plt.imshow(pss.materials[1,:,:],interpolation='nearest',cmap='binary',alpha=.5)
@@ -60,6 +67,11 @@ plt.show()
 S = float(np.sum(UC)-4*3)#There are 4 particles and 3 cells overlap per particle
 print "Approximate Volume Fraction = {:3.1f}".format(S/float(lx*ly))
 
-pss.save_general_mesh(mixed=False)
-
+A,B = pss.part_distance(xcoords,ycoords,radii,Ms,plot=True)
+xcoords *= GRIDSPC
+ycoords *= GRIDSPC
+radii   *= GRIDSPC
+pss.save_spherical_parts(xcoords,ycoords,radii,Ms,A)
+#pss.view_mesoiSALE('meso_A-0.8000.iSALE')
+#pss.save_general_mesh(mixed=False)
 

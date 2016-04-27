@@ -57,11 +57,15 @@ def unit_cell(LX=None,LY=None):
     UC = np.zeros((Ms,LX,LY))
     return UC
 
-def copypasteUC(UC):
+def copypasteUC(UC,UCX,UCY,RAD,MATS):
     global meshx,meshy,materials
     LX,LY = np.shape(UC[0,:,:])
     i  = 0
     ii = LX
+    xcoords = np.copy(UCX)
+    ycoords = np.copy(UCY)
+    mats    = np.copy(MATS)
+    rad     = np.copy(RAD)
     while i < meshx:
         j = 0
         jj = LY
@@ -75,9 +79,25 @@ def copypasteUC(UC):
                 jj = abs(j - meshy)
                 J  = meshy
             materials[:,i:I,j:J] = UC[:,:ii,:jj]
+            ycoords = np.append(ycoords,UCY+i)
+            xcoords = np.append(xcoords,UCX+j)
+            mats    = np.append(mats,MATS)
+            rad     = np.append(rad,RAD)
             j += LX
         i += LY
-    return
+    R = np.mean(rad)
+    xc       = xcoords[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    yc       = ycoords[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    rads     =     rad[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    mat      =    mats[(xcoords<meshx+R)*(ycoords<meshy+R)]
+    coords   = np.column_stack((mat,xc,yc,rads))
+
+    coords = np.vstack({tuple(row) for row in coords})
+
+    #c,indices = np.unique(coords,return_index = True)
+    #print xcoords
+    #coords = coords[indices]
+    return coords[:,0],coords[:,1],coords[:,2],coords[:,3]
 
 def estimate_no_particles(R = 10, X = 1000, Y = 1000, VF = 0.5):
 	"""
@@ -287,144 +307,171 @@ def gen_polygon(sides,radii):
 	return mesh0, AREA
 
 def check_coords_full(shape,x,y):																		
-	"""
-	This function checks if the chosen shape will overlap with any other material,
-	should it be placed.
-	
-	It works by initially checking the location of the generated coords and 
-	ammending them if the shape overlaps the edge of the mesh. Then the two arrays
-	can be compared.
-	
-	shape : the array based on mesh0 containg the shape
-	x     : The x coord of the shape's origin
-	y     : The equivalent y coord
-	
-	the value of CHECK is returned. 1 is a failure, 0 is success.
-	"""
-	global mesh, meshx, meshy, cppr_mid																	# use global parameters
-	X, Y   = np.shape(shape)																			# Dimensions of particle's mesh
-	i_edge = int(x - X/2)																				# Location of the edge of the shape to be checked's mesh; 
-																										# within the main mesh.
-	j_edge = int(y - Y/2)
-	i_finl = i_edge + X
-	j_finl = j_edge + Y
-	CHECK  = 0																							# Initialise the CHECK as 0; 0 == all fine
-	
-	if i_edge < 0:																						# If the coords have the particle being generated over the mesh boundary
-		I_initial = abs(i_edge)																			# This bit checks for this, 
-																										# and reassigns a negative starting index to zero
-		i_edge    = 0																					# However, the polygon's mesh will not completely be in the main mesh 
-	else:																								# So I_initial defines the cut-off point
-	    I_initial = 0																					# If the polygon's mesh does not extend beyond the main mesh,
-																										# then I_initial is just 0
-	if j_edge < 0:																						# Repeat for the j-coordinate
-		J_initial = abs(j_edge) 
-		j_edge = 0
-	else:
-		J_initial = 0
-	
-	if i_finl > meshx: i_finl = meshx																	# If coords place shape outside of other end of mesh,
-																										# redefine end edges.		
-	if j_finl > meshy: j_finl = meshy	
-	
-	for i in range(i_edge, i_finl, 1):																	# Iterate over the section of the full mesh of interest
-		I = i - i_edge + I_initial																		# The equivalent index within the polygon's mesh
-		for j in range(j_edge, j_finl, 1):
-			J = j - j_edge + J_initial
-			if mesh[i,j]!=0. and shape[I,J] != 0.:
-					CHECK = 1																			# If there's a point in the polygon's mesh that has material,
-																										# AND the corresponding point    
-	return CHECK																						# has material in it in the main mesh => failure and CHECK = 1
+    """
+    This function checks if the chosen shape will overlap with any other material,
+    should it be placed.
+    
+    It works by initially checking the location of the generated coords and 
+    ammending them if the shape overlaps the edge of the mesh. Then the two arrays
+    can be compared.
+    
+    shape : the array based on mesh0 containg the shape
+    x     : The x coord of the shape's origin
+    y     : The equivalent y coord
+    
+    the value of CHECK is returned. 1 is a failure, 0 is success.
+    """
+    global mesh, meshx, meshy, cppr_mid,cppr_max														# use global parameters
+    cell_limit = (np.pi*float(cppr_max)**2.)/100.														# Max number of overlapping cells should scale with area.
+    CHECK  = 0																							# Initialise the CHECK as 0; 0 == all fine
+    Px, Py     = np.shape(shape)
+    
+    if x > meshx+cppr_max: CHECK = 1
+    if x < 0-cppr_max:  CHECK = 1
+    if y > meshy+cppr_max: CHECK = 1
+    if y < 0-cppr_max:  CHECK = 1																		# If the coord moves out of the mesh, wrap back around.
+    i_edge   = y - cppr_max - 1																		# Location of the edge of the polygon's mesh, within the main mesh.
+    j_edge   = x - cppr_max - 1
+    i_finl   = y + cppr_max + 1																		# The indices refer to the close edge to the origin,
+    		                    																	# the extra cell should be added on the other side
+    j_finl   = x + cppr_max + 1																		# i.e. the side furthest from the origin
+    	
+    if i_edge < 0:																					# If the coords have the particle being generated over the mesh boundary
+        I_initial = abs(i_edge)																		# This bit checks for this, and reassigns a negative starting
+    																								# index to zero
+        i_edge    = 0																				# However, the polygon's mesh will not completely be in the main mesh 
+    else:																							# So I_initial defines the cut-off point
+        I_initial = 0																				# If the polygon's mesh does not extend beyond the main mesh,
+    																								# then I_initial is just 0
+    if j_edge < 0:																					# Repeat for the j-coordinate
+        J_initial = abs(j_edge) 
+        j_edge = 0
+    else:
+        J_initial = 0
+    
+    I_final = Px																					# In a numpy array '-1' indicates the last element.		
+    if (i_finl)>meshx:																					# Similarly for the other end of the mesh
+    	I_final -= abs(meshx-i_finl)																	# The above only sorts out two sides of the mesh
+    	i_finl   = meshx
+    J_final = Py
+    if (j_finl)>meshy:
+    	J_final -= abs(meshy-j_finl) 
+    	j_finl   = meshy
+    
+    """	
+    for i in range(i_edge, i_finl, 1):																	# Iterate over the section of the full mesh of interest
+    	I = i - i_edge + I_initial																		# The equivalent index within the polygon's mesh
+    	for j in range(j_edge, j_finl, 1):
+    		J = j - j_edge + J_initial
+    		if mesh[i,j]!=0. and shape[I,J] != 0.:
+    				CHECK = 1																			# If there's a point in the polygon's mesh that has material,
+    """																									# AND the corresponding point    
+    temp_shape = np.copy(shape[I_initial:I_final,J_initial:J_final])											# The rectangular array containing the portion of shape 
+    temp_mesh  = np.copy(mesh[i_edge:i_finl,j_edge:j_finl])													# The equivalent rectangular array within the mesh, in the correct place
+    test       = np.minimum(temp_shape,temp_mesh)													# An array containing any points that have material in,
+    																									# in the same place, in BOTH arrays		
+    if (np.sum(test) > 0):											# If 'test' is > 2, then there are more than 2 cells 
+        CHECK=1
+        pass																								# overlapping with other objects at this position
+    elif(np.sum(test) == 0):																# If there are fewer than 2 overlapping cells, but MORE than 0,
+        pass
+    return CHECK																						# has material in it in the main mesh => failure and CHECK = 1
 
 
 def drop_shape_into_mesh(shape,rr):
-	"""
-	This function 'drops' a particle into the mesh and has it undergo a random walk
-	until it overlaps sufficiently with another particle and is declared 'touching'.
-	Only then is a particle fully inserted into the mesh.
-	
-	"""
-	global mesh, meshx, meshy, cppr_max, cppr_min, materials
-	
-	cell_limit = (np.pi*float(cppr_max)**2.)/100.														# Max number of overlapping cells should scale with area.
-																										# area ~= 110 cells for 6cppr
-																										# Does NOT need to be integer since values in the mesh are floats, 
-																										# and it is their sum that is calculated.
-	touching   = 0																						# Initialise the indicators for this function
-	passes     = 1																						# here are 'passes' and 'counter' similar to check_coords_full
-	counter    = 0																						# But this time there is 'touching' which indicates
-																										# contact between particles
-	x,y = gen_coord_basic()
-	
-	Nx, Ny     = meshx, meshy
-	Px, Py     = np.shape(shape)
-	while touching == 0:	
-		#if x > Nx-rr or x < rr: x,y = gen_coord_basic()
-		#if y > Ny-rr or y < rr: x,y = gen_coord_basic()
-		if x > Nx: x = 0
-		if x < 0:  x = Nx
-		if y > Ny: y = 0
-		if y < 0:  y = Ny																				# If the coord moves out of the mesh, wrap back around.
-		i_edge   = x - cppr_max - 1																		# Location of the edge of the polygon's mesh, within the main mesh.
-		j_edge   = y - cppr_max - 1
-		i_finl   = x + cppr_max + 1																		# The indices refer to the close edge to the origin,
-																										# the extra cell should be added on the other side
-		j_finl   = y + cppr_max + 1																		# i.e. the side furthest from the origin
-			
-		if i_edge < 0:																					# If the coords have the particle being generated over the mesh boundary
-		    I_initial = abs(i_edge)																		# This bit checks for this, and reassigns a negative starting
-																										# index to zero
-		    i_edge    = 0																				# However, the polygon's mesh will not completely be in the main mesh 
-		else:																							# So I_initial defines the cut-off point
-		    I_initial = 0																				# If the polygon's mesh does not extend beyond the main mesh,
-																										# then I_initial is just 0
-		if j_edge < 0:																					# Repeat for the j-coordinate
-		    J_initial = abs(j_edge) 
-		    j_edge = 0
-		else:
-		    J_initial = 0
-		
-		I_final = Px																					# In a numpy array '-1' indicates the last element.		
-		if (i_finl)>Nx:																					# Similarly for the other end of the mesh
-			I_final -= abs(Nx-i_finl)																	# The above only sorts out two sides of the mesh
-			i_finl   = Nx
-		J_final = Py
-		if (j_finl)>Ny:
-			J_final -= abs(Ny-j_finl) 
-			j_finl   = Ny
-		
-		
-		temp_shape = shape[I_initial:I_final,J_initial:J_final]											# The rectangular array containing the portion of shape 
-																										# to be placed into mesh 
-		temp_mesh  = mesh[i_edge:i_finl,j_edge:j_finl]													# The equivalent rectangular array within the mesh, in the correct place
-		test       = np.minimum(temp_shape,temp_mesh)													# An array containing any points that have material in,
-																										# in the same place, in BOTH arrays		
-
-		if (np.sum(test) > cell_limit or np.sum(test) == 0.):											# If 'test' is > 2, then there are more than 2 cells 
-																										# overlapping with other objects at this position
-		    rx = random.randint(-cppr_min,cppr_min)
-		    ry = random.randint(-cppr_min,cppr_min)
-		    y += ry 
-		    x += rx
-		elif(np.sum(test) <= cell_limit):																# If there are fewer than 2 overlapping cells, but MORE than 0,
-																										# place shape here.
-			"""
-		    #plt.figure(1)
-		    #plt.imshow(np.maximum(mesh[i_edge:i_finl,j_edge:j_finl],shape[I_initial:I_final,J_initial:J_final]), cmap='Greys',  interpolation='nearest')
-		    #plt.plot(x,y,color='r',marker='o',ms='5')
-		    #plt.show()
-			"""
-			mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])	
-																										# materials contains each cell's material number.
-																										# Prior to mat assignment 
-																										# it is just the particle number
-			touching = 1																				# Assign 'touching' a value of 1 to break loop
-			#temp_shape[temp_shape>0.] = 1.																# Change all values in temp_shape to 1., if not already 
-			area = np.sum(temp_shape) - np.sum(test)													# Area placed into mesh is the sum of all positive points
-																										# in temp_shape - overlap
-		else:
-		    pass
-	return x,y,area
+    """
+    This function 'drops' a particle into the mesh and has it undergo a random walk
+    until it overlaps sufficiently with another particle and is declared 'touching'.
+    Only then is a particle fully inserted into the mesh.
+    
+    """
+    global mesh, meshx, meshy, cppr_max, cppr_min, materials
+    
+    cell_limit = (np.pi*float(cppr_max)**2.)/100.                                                        # Max number of overlapping cells should scale with area.
+                                                                                                        # area ~= 110 cells for 6cppr
+                                                                                                        # Does NOT need to be integer since values in the mesh are floats, 
+                                                                                                        # and it is their sum that is calculated.
+    touching   = 0                                                                                        # Initialise the indicators for this function
+    passes     = 1                                                                                        # here are 'passes' and 'counter' similar to check_coords_full
+    counter    = 0                                                                                        # But this time there is 'touching' which indicates
+                                                                                                        # contact between particles
+    x,y = gen_coord_basic()
+    
+    Nx, Ny     = meshx, meshy
+    Px, Py     = np.shape(shape)
+    while touching == 0:    
+        #if x > Nx-rr or x < rr: x,y = gen_coord_basic()
+        #if y > Ny-rr or y < rr: x,y = gen_coord_basic()
+        if x > Nx+cppr_max: x = 0-cppr_max+1
+        if x < 0-cppr_max:  x = Nx+cppr_max-1
+        if y > Ny+cppr_max: y = 0-cppr_max+1
+        if y < 0-cppr_max:  y = Ny+cppr_max-1                                                            # If the coord moves out of the mesh, wrap back around.
+        i_edge   = x - cppr_max - 1                                                                        # Location of the edge of the polygon's mesh, within the main mesh.
+        j_edge   = y - cppr_max - 1
+        i_finl   = x + cppr_max + 1                                                                        # The indices refer to the close edge to the origin,
+                                                                                                        # the extra cell should be added on the other side
+        j_finl   = y + cppr_max + 1                                                                        # i.e. the side furthest from the origin
+            
+        if i_edge < 0:                                                                                    # If the coords have the particle being generated over the mesh boundary
+            I_initial = abs(i_edge)                                                                        # This bit checks for this, and reassigns a negative starting
+                                                                                                        # index to zero
+            i_edge    = 0                                                                                # However, the polygon's mesh will not completely be in the main mesh 
+        else:                                                                                            # So I_initial defines the cut-off point
+            I_initial = 0                                                                                # If the polygon's mesh does not extend beyond the main mesh,
+                                                                                                        # then I_initial is just 0
+        if j_edge < 0:                                                                                    # Repeat for the j-coordinate
+            J_initial = abs(j_edge) 
+            j_edge = 0
+        else:
+            J_initial = 0
+        
+        I_final = Px                                                                                    # In a numpy array '-1' indicates the last element.        
+        if (i_finl)>Nx:                                                                                    # Similarly for the other end of the mesh
+            I_final -= abs(Nx-i_finl)                                                                    # The above only sorts out two sides of the mesh
+            i_finl   = Nx
+        J_final = Py
+        if (j_finl)>Ny:
+            J_final -= abs(Ny-j_finl) 
+            j_finl   = Ny
+        
+        
+        temp_shape = np.copy(shape[I_initial:I_final,J_initial:J_final])                                            # The rectangular array containing the portion of shape 
+                                                                                                        # to be placed into mesh 
+        temp_mesh  = np.copy(mesh[i_edge:i_finl,j_edge:j_finl])                                                    # The equivalent rectangular array within the mesh, in the correct place
+        test       = np.minimum(temp_shape,temp_mesh)                                                    # An array containing any points that have material in,
+                                                                                                        # in the same place, in BOTH arrays        
+        if abs(I_initial-I_final)<=cppr_min or abs(J_initial-J_final)<= cppr_min:
+            rx = random.randint(-cppr_min,cppr_min)
+            ry = random.randint(-cppr_min,cppr_min)
+            y += ry 
+            x += rx
+        elif (np.sum(test) > cell_limit or np.sum(test) == 0.):                                            # If 'test' is > 2, then there are more than 2 cells 
+                                                                                                        # overlapping with other objects at this position
+            rx = random.randint(-cppr_min,cppr_min)
+            ry = random.randint(-cppr_min,cppr_min)
+            y += ry 
+            x += rx
+        elif(np.sum(test) <= cell_limit):                                                                # If there are fewer than 2 overlapping cells, but MORE than 0,
+                                                                                                        # place shape here.
+            #plt.figure(1)
+            #plt.imshow(np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl]), cmap='Greys',  interpolation='nearest')
+            #plt.plot(x,y,color='r',marker='o',ms='5')
+            #plt.show()
+            mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])    
+            #plt.figure(1)
+            #plt.imshow(mesh, cmap='Greys',  interpolation='nearest')
+            #plt.plot(y,x,color='r',marker='o',ms='5')
+            #plt.show()
+                                                                                                        # materials contains each cell's material number.
+                                                                                                        # Prior to mat assignment 
+                                                                                                        # it is just the particle number
+            touching = 1                                                                                # Assign 'touching' a value of 1 to break loop
+            #temp_shape[temp_shape>0.] = 1.                                                                # Change all values in temp_shape to 1., if not already 
+            area = np.sum(temp_shape) - np.sum(test)                                                    # Area placed into mesh is the sum of all positive points
+                                                                                                        # in temp_shape - overlap
+        else:
+            pass
+    return y,x,area# NB IT IS THIS WAY ROUND AND NOT: (x,y)!!!!!
             
 def insert_shape_into_mesh(shape,x0,y0):
 	"""
@@ -455,11 +502,11 @@ def insert_shape_into_mesh(shape,x0,y0):
 	"""
 	global mesh, meshx, meshy, cppr_max, materials
 	Px, Py = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
-	i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
-	j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
-	i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
+	i_edge = y0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
+	j_edge = x0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
+	i_finl = y0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
 																										# an extra cell is added either side
-	j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
+	j_finl = x0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
 	
 	""" 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
 	if i_edge < 0:																						# Condition if the coords have the particle being generated 
@@ -488,6 +535,10 @@ def insert_shape_into_mesh(shape,x0,y0):
 	
 	temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
 	mesh[i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],mesh[i_edge:i_finl,j_edge:j_finl])
+    #plt.figure(1)
+    #plt.imshow(mesh, cmap='Greys',  interpolation='nearest')
+    #plt.plot(x0,y0,color='r',marker='o',ms='5')
+    #plt.show()
 	
 														
 	""" The shape is inserted by comparing, and taking the maximum, of the two arrays  """
@@ -544,8 +595,10 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None):
     	j_finl   = LY
     
     temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
-    #materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
-    MATS[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
+    if MATS == None:
+        materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
+    else:
+        MATS[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
     #objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
     #objects_temp[objects_temp>0.]                = obj
     #objects[mat-1,i_edge:i_finl,j_edge:j_finl]   = objects_temp 
@@ -609,12 +662,11 @@ def gen_coord(shape):
     while check == 1:																					# Begin the loop. whilst check = 1, continue to loop 
         x,y = random.choice(indices)																	# This randomly selects one pair of coordinates!
         check = check_coords_full(shape,x,y)															# Function to check if the polygon generated will fit 
-        																								# in the generated coords
         counter += 1																					# Increment the counter
         if counter>5000:																				# If the counter exceeds 5000, this is the break clause
             check = 0																					# Break the loop and report the failure in the return
             passes= 1																					# if counter exceeds 1000 -> break loop and assign passes[k] = 1
-        break
+            break
     return x,y,passes
 
 
@@ -795,15 +847,15 @@ def part_distance(X,Y,radii,MAT,plot=False):
 	if plot == True:																					# If plot == True then produce a figure
 	    fig = plt.figure()
 	    ax = fig.add_subplot(111,aspect='equal')
-	    ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic 
+        ax.set_xlim(0,meshy*GRIDSPC)																	# limits are set like this to ensure the final graphic 
 																										# matches the mesh in orientation
-	    ax.set_ylim(meshx*GRIDSPC,0)
+        ax.set_ylim(meshx*GRIDSPC,0)
         for i in range(N):																				# Plot each circle in turn
             ax.plot([X[i]],[Y[i]],color='k',marker='o',linestyle=' ',ms=3)
-        #    circle = plt.Circle((X[i],Y[i]),radii[i],color='{:1.2f}'.format((MAT[i])*.5/np.amax(MAT)))  # give each one a color based on their material number. 
+            circle = plt.Circle((X[i],Y[i]),radii[i],color='{:1.2f}'.format((MAT[i])*.5/np.amax(MAT)))  # give each one a color based on their material number. 
 
 																										# NB any color = 1. will be WHITE 
-        #ax.add_patch(circle)
+            ax.add_patch(circle)
 	
 	for i in range(N-1):
 		D *= 0.																							 # Initialise D each loop, in case it is full and 
