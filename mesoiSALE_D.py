@@ -18,9 +18,9 @@ def Dstra_1(A,filepath = 'meso.iSALE',plot=False):
     Y  = Y[indices]/R
     X  = X[indices]/R
     R  = R[indices]/R
-    Xx = X[(X>0)*(Y>0)]
-    Yy = Y[(X>0)*(Y>0)]
-    R  = R[(X>0)*(Y>0)]
+    Xx = X[(X>=0)*(Y>=0)]
+    Yy = Y[(X>=0)*(Y>=0)]
+    R  = R[(X>=0)*(Y>=0)]
     X  = np.copy(Xx)
     Y  = np.copy(Yy)
     crit_angle  = 40                                                                                    # The angle after which Force chains no longer propagate
@@ -83,35 +83,40 @@ def Dstra_1(A,filepath = 'meso.iSALE',plot=False):
     	gdist[m] = Ggraph[start[m],end[m]]
     
     if plot == True:
-        fig = plt.figure()
+        fig = plt.figure(figsize=(3.5,3.5))
         ax  = fig.add_subplot(111,aspect='equal')
         ax.set_ylim([np.amin(X)-np.amax(R),np.amax(X)+np.amax(R)])
         ax.set_xlim([np.amin(Y)-np.amax(R),np.amax(Y)+np.amax(R)])
         for i in range(N):																				# Plot each circle in turn
-            circle = plt.Circle((X[i],Y[i]),R[i],color='k',fill=False)#'{:1.2f}'.format((M[i])*.5/np.amax(M))) 
+            circle = plt.Circle((X[i],Y[i]),R[i],color='k',lw=.5,fill=False)#'{:1.2f}'.format((M[i])*.5/np.amax(M))) 
             ax.add_patch(circle)
         ax.set_xlim(0,np.amax(X))
         ax.set_ylim(np.amax(Y),0)
     
     	for o in range(nn):
-    	    ax.plot([X[start[o]],X[end[o]]],[Y[start[o]],Y[end[o]]],marker='x',mew=2.,ms=4,color='k',lw=2.,linestyle=' ')
+            ax.plot([X[start[o]],X[end[o]]],[Y[start[o]],Y[end[o]]],marker='x',mew=1.,ms=4,color='k',lw=2.,linestyle=' ')
             ii = end[o]
             steps = 0
             II = ii
             while ii != start[o]:
                 steps += 1
                 #ax.plot(X[ii],Y[ii],marker='x',mew=2,ms=5,color='r')
-                ax.plot([X[II],X[ii]],[Y[II],Y[ii]],color='k',lw=1.5)
+                ax.plot([X[II],X[ii]],[Y[II],Y[ii]],color='k',lw=1.)
                 II = ii
                 ii = predG[start[o],ii]
-            ax.plot([X[II],X[ii]],[Y[II],Y[ii]],color='k',lw=1.5)
+                if ii == -9999: break
+            if ii == -9999:
+                pass
+            else:
+                ax.plot([X[II],X[ii]],[Y[II],Y[ii]],color='k',lw=1.)
     
-        ax.set_xlabel('Transverse Position [Radii]')
-        ax.set_ylabel('Longitudinal Position [Radii]')
+        ax.set_xlabel('Transverse \nPosition [Radii]',fontsize=14)
+        ax.set_ylabel('Longitudinal \nPosition [Radii]',fontsize=14)
     
     K = (np.mean(gdist)/np.mean(gdist+2*(steps+1))) * 100.
-    ax.set_title('$K = ${:1.3f}% '.format(K))
-    plt.savefig('gaps_Dijk1_figure_A-{}_K-{:1.3f}percent.png'.format(A,K),dpi=600)		                				 # Save the figure
+    ax.set_title('$K = ${:1.1f}% '.format(K),fontsize=16)
+    plt.tight_layout()
+    plt.savefig('gaps_Dijk1_figure_A-{}_K-{:1.3f}percent.pdf'.format(A,K),format='pdf',dpi=600,bbox_inches='tight')		                				 # Save the figure
     plt.show()
     return K
 
