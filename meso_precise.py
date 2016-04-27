@@ -55,7 +55,7 @@ while j < pss.meshy+cppr:
             pss.place_shape(pss.mesh_Shps[0,:,:],j,item,M)
             yc.append(j)
             xc.append(item)
-            radii.append(r)
+            radii.append(float(r))
             mats.append(M)
         M += 1
         if M > 4: M = 0
