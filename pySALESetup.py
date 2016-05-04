@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.):
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GS=2.e-6):
 	"""
 	This function generates the global mesh that all particles will be inserted into.
 	Initially it reads in several parameters and renames them within the module. Then 
@@ -39,8 +39,8 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.):
 	mesh      = np.zeros((meshx,meshy))
 	materials = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
 	objects   = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
-	xh        = np.arange(meshx)																		# arrays of physical positions of cell BOUNDARIES (not centres)
-	yh        = np.arange(meshy)
+	xh        = np.arange(meshx+1)*GS																		# arrays of physical positions of cell BOUNDARIES (not centres)
+	yh        = np.arange(meshy+1)*GS
 	Ns        = 2*(cppr_max)+2																		# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
 	N         = 20																						# N is the number of different particles that can be generated  
 	part_area = np.zeros((N))
@@ -1296,6 +1296,56 @@ def fill_arbitrary_shape(X,Y,mat):
 
 	return
 
+def fill_arbitrary_shape_Phys(X,Y,mat):						
+    """
+    Function to fill an arbitrary shape in the mesh based on arrays of vertices.
+    This version does NOT partially fill cells.
+    NB for this to work the coordinates of the vertices MUST be relative to the centre of the object.
+    This version of the function accepts physical units, such as mm.
+
+    X, Y      : vertices in physical units
+    """
+    global mesh, materials,meshx,meshy,xh,yh                                                            # Only the angles used are now randomly selected.
+    N      = np.size(X)
+    R      = np.zeros((2,N))                                                                            # Array for the coords of the vertices
+    x0,y0 = find_centroid(X,Y)
+    R[0,:] = X - x0                                                                                     # Each vertex will also be successive, such that drawing a line between
+    R[1,:] = Y - y0                                                                                     # each one in order, will result in no crossed lines.
+    qx = 0.                                                                                             # Make the reference point (q) zero, i.e. the centre of the shape
+    qy = 0.                                                                                             # All dimensions are in reference to the central coordinates.
+    for j in range(meshy):                                                                              # Iterate through all the x- and y-coords
+        for i in range(meshx):                                                                            
+            xc = 0.5*(xh[i]+xh[i+1])-x0                                                                 # Convert current coord to position relative to (x0,y0) 
+            yc = 0.5*(yh[j]+yh[j+1])-y0                                                                 # Everything is now in indices, with (x0,y0)
+            sx = xc - qx                                                                                # s = vector difference between current coord and ref coord
+            sy = yc - qy        
+            intersection = 0                                                                            # Initialise no. intersections as 0
+            for l in range(N-1):                                                                        # cycle through each edge, bar the last
+                rx = R[0,l+1] - R[0,l]                                                                  # Calculate vector of each edge (r), 
+                                                                                                        # i.e. the line between the lth vertex and the l+1th vertex
+                ry = R[1,l+1] - R[1,l]
+                RxS = (rx*sy-ry*sx)                                                                     # Vector product of r and s (with z = 0), 
+                                                                                                        # technically produces only a z-component
+                if RxS!=0.:                                                                             # If r x s  = 0 then lines are parallel
+                    t = ((qx-R[0,l])*sy - (qy-R[1,l])*sx)/RxS
+                    u = ((qx-R[0,l])*ry - (qy-R[1,l])*rx)/RxS    
+                    if t<=1. and t>=0. and u<=1. and u>=0.:
+                        intersection = intersection + 1
+            rx = R[0,0] - R[0,N-1]                                                                      # Do the last edge. 
+                                                                                                        # Done separately to avoid needing a circular 'for' loop
+            ry = R[1,0] - R[1,N-1]
+            if (rx*sy-ry*sy)!=0.:
+                RxS = (rx*sy-ry*sx)
+                t = ((qx-R[0,N-1])*sy - (qy-R[1,N-1])*sx)/RxS
+                u = ((qx-R[0,N-1])*ry - (qy-R[1,N-1])*rx)/RxS
+                if t<=1. and t>=0. and u<=1. and u>=0.:
+                    intersection = intersection + 1
+            if (intersection%2==0.):                                                                    # If number of intersections is divisible by 2 (or just zero) 
+                                                                                                        #-> fill that cell!
+                mesh[i,j]            = 1.0
+                materials[mat-1,i,j] = 1.0
+
+    return
 def fill_arbitrary_shape_p(X,Y,mat):						
 	"""
 	Function to fill an arbitrary shape in the mesh based on arrays of vertices.
@@ -1355,27 +1405,37 @@ def fill_arbitrary_shape_p(X,Y,mat):
 	return
 
 def find_centroid(x,y):
-	"""
-	Simple function to return the centroid coordinate of an arbitrary, non-intersecting polygon.
-	with n vertices. see https://en.wikipedia.org/wiki/Centroid#Locating_the_centroid for further
-	information.
-	"""
-	x = np.append(x,x[0])
-	y = np.append(y,y[0])
+    """
+    Simple function to return the centroid coordinate of an arbitrary, non-intersecting polygon.
+    with n vertices. see https://en.wikipedia.org/wiki/Centroid#Locating_the_centroid for further
+    information.
+    """
+    if ((x[0],y[0]) != (x[-1],y[-1])):
+        x = np.append(x,x[0])
+        y = np.append(y,y[0])
+    else:
+        pass
+    rectangle = False
+    if ((x[0],x[1]) != (x[2],x[3]) and (y[0],y[1]) == (y[2],y[3]) or ((y[0],y[1]) != (y[2],y[3]) and (x[0],x[1]) == (x[2],x[3]))): rectangle = True
 
-	n = np.size(x)
-	A  = 0
-	Cx = 0
-	Cy = 0
-	for i in range(n-1):
-		A += (x[i]*y[i+1]-x[i+1]*y[i])*.5
-	for j in range(n-1):
-		Cx += (x[j]+x[j+1])*(x[j]*y[j+1]-x[j+1]*y[j])
-		Cy += (y[j]+y[j+1])*(x[j]*y[j+1]-x[j+1]*y[j])
-	
-	Cx /= (6.*A)
-	Cy /= (6.*A)
-	return Cx,Cy
+    n = np.size(x)
+    A  = 0
+    Cx = 0
+    Cy = 0
+    if rectangle:
+        Cx = (np.amax(x)+np.amin(x))/2.
+        Cy = (np.amax(y)+np.amin(y))/2.
+    else:
+        for i in range(n-1):
+            A += (x[i]*y[i+1]-x[i+1]*y[i])*.5
+            print A
+        for j in range(n-1):
+            Cx += (x[j]+x[j+1])*(x[j]*y[j+1]-x[j+1]*y[j])
+            Cy += (y[j]+y[j+1])*(x[j]*y[j+1]-x[j+1]*y[j])
+        
+        Cx /= (6.*A)
+        Cy /= (6.*A)
+    return Cx,Cy
 
 def fill_arbitrary_shape_P(X,Y,mat):						
 	"""
