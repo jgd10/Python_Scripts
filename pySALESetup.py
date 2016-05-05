@@ -7,48 +7,48 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GS=2.e-6):
-	"""
-	This function generates the global mesh that all particles will be inserted into.
-	Initially it reads in several parameters and renames them within the module. Then 
-	several arrays are initialised, both of the main mesh and the 'shape' meshes (mesh0)
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GridSpc=2.e-6):
+    """
+    This function generates the global mesh that all particles will be inserted into.
+    Initially it reads in several parameters and renames them within the module. Then 
+    several arrays are initialised, both of the main mesh and the 'shape' meshes (mesh0)
 
-	X    : The x-length of the mesh, in cells
-	Y    : The y-length of the mesh, in cells
-	CPPR : The chosen value of cells per particle radius
-	pr   : The particle size range (a fraction). The range of particle sizes that will be produced
-	VF   : The volume fraction. AKA the ratio of particle to void we want to achieve
+    X    : The x-length of the mesh, in cells
+    Y    : The y-length of the mesh, in cells
+    CPPR : The chosen value of cells per particle radius
+    pr   : The particle size range (a fraction). The range of particle sizes that will be produced
+    VF   : The volume fraction. AKA the ratio of particle to void we want to achieve
 
-	Nothing is returned but many factors become global.
+    Nothing is returned but many factors become global.
 
-	NB. Recently I have updated 'N' to now be the number of different particles that can be generated
-	and NOT N**2. 19-01-16
-	"""
-	global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects,FRAC,OBJID
-
-	Ms        = mat_no																					# M is the number of materials within the mesh
-	mats      = np.arange(Ms)+1.
-	meshx	  = X
-	meshy	  = Y
-	cppr_mid  = CPPR
-	PR        = pr
-	eccen     = e																						# Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
-	cppr_min  = int((1-PR)*cppr_mid)																# Min No. cells/particle radius 
-	cppr_max  = int((1+PR)*cppr_mid)																	# Max No. cells/particle radius
-	vol_frac  = VF																						# Target fraction by volume of parts:void
-	mesh      = np.zeros((meshx,meshy))
-	materials = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
-	objects   = np.zeros((Ms,meshx,meshy))																# The materials array contains a mesh for each material number
-	xh        = np.arange(meshx+1)*GS																		# arrays of physical positions of cell BOUNDARIES (not centres)
-	yh        = np.arange(meshy+1)*GS
-	Ns        = 2*(cppr_max)+2																		# Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
-	N         = 20																						# N is the number of different particles that can be generated  
-	part_area = np.zeros((N))
-	mesh0     = np.zeros((Ns,Ns))																		# Generate mesh that is square and slightly larger than the max particle size
-																										# This will be the base for any shapes that are generated
-	mesh_Shps = np.zeros((N,Ns,Ns))																		# Generate an array of meshes of this size. of size N (Ns x Ns x N)
-	FRAC      = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
-	OBJID     = np.zeros((Ms,meshx*meshy))																# An array for storing the fractions of material 
+    NB. Recently I have updated 'N' to now be the number of different particles that can be generated
+    and NOT N**2. 19-01-16
+    """
+    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects,FRAC,OBJID,GS
+    GS        = GridSpc
+    Ms        = mat_no                                                                                    # M is the number of materials within the mesh
+    mats      = np.arange(Ms)+1.
+    meshx      = X
+    meshy      = Y
+    cppr_mid  = CPPR
+    PR        = pr
+    eccen     = e                                                                                        # Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
+    cppr_min  = int((1-PR)*cppr_mid)                                                                # Min No. cells/particle radius 
+    cppr_max  = int((1+PR)*cppr_mid)                                                                    # Max No. cells/particle radius
+    vol_frac  = VF                                                                                        # Target fraction by volume of parts:void
+    mesh      = np.zeros((meshx,meshy))
+    materials = np.zeros((Ms,meshx,meshy))                                                                # The materials array contains a mesh for each material number
+    objects   = np.zeros((Ms,meshx,meshy))                                                                # The materials array contains a mesh for each material number
+    xh        = np.arange(meshx+1)*GS                                                                        # arrays of physical positions of cell BOUNDARIES (not centres)
+    yh        = np.arange(meshy+1)*GS
+    Ns        = 2*(cppr_max)+2                                                                        # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
+    N         = 20                                                                                        # N is the number of different particles that can be generated  
+    part_area = np.zeros((N))
+    mesh0     = np.zeros((Ns,Ns))                                                                        # Generate mesh that is square and slightly larger than the max particle size
+                                                                                                        # This will be the base for any shapes that are generated
+    mesh_Shps = np.zeros((N,Ns,Ns))                                                                        # Generate an array of meshes of this size. of size N (Ns x Ns x N)
+    FRAC      = np.zeros((Ms,meshx*meshy))                                                                # An array for storing the fractions of material 
+    OBJID     = np.zeros((Ms,meshx*meshy))                                                                # An array for storing the fractions of material 
 
 def unit_cell(LX=None,LY=None):
     global meshx,meshy,cppr_mid,Ms
@@ -1175,6 +1175,24 @@ def fill_plate(y1,y2,mat,invert=False):
 			mesh[j,:]            = 1.
 	return
 
+def fill_rectangle(L1,T1,L2,T2,mat,invert=False):
+    """
+    This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
+    It fills all cells between y1 and y2.
+    """
+    global meshx,meshy,materials,mesh,xh,yh
+    assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
+    assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
+    for i in range(meshx):
+        Lc = 0.5*(xh[i] + (xh[i+1]))                                                                    
+        if Lc <= L2 and Lc >= L1:
+            for j in range(meshy):
+                Tc = 0.5*(yh[j] + (yh[j+1]))                        
+                if Tc <= T2 and Tc >= T1:
+                    materials[:,i,j]     = 0.                                                            # This ensures that plates override in the order they are placed.
+                    materials[mat-1,i,j] = 1.
+                    mesh[i,j]            = 1.
+    return
 def fill_above_line(r1,r2,mat,invert=False,mixed=False):
 	"""
 	This function takes two points and fills all cells above the line drawn between them.
@@ -1341,10 +1359,9 @@ def fill_arbitrary_shape_Phys(X,Y,mat):
                 if t<=1. and t>=0. and u<=1. and u>=0.:
                     intersection = intersection + 1
             if (intersection%2==0.):                                                                    # If number of intersections is divisible by 2 (or just zero) 
-                                                                                                        #-> fill that cell!
                 mesh[i,j]            = 1.0
                 materials[mat-1,i,j] = 1.0
-
+    
     return
 def fill_arbitrary_shape_p(X,Y,mat):						
 	"""
