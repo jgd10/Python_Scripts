@@ -9,11 +9,12 @@ import time
 
 L_cells    = 224 				# T - Transverse, L - Longitudinal
 T_cells    = 407 
+r = 8
 T_length   = 25.4e-3
 L_length   = 14.0e-3
 GRIDSPC    = L_length/L_cells
 
-pss.generate_mesh(L_cells,T_cells,mat_no=5,GridSpc=GRIDSPC)
+pss.generate_mesh(L_cells,T_cells,CPPR=r,mat_no=5,GridSpc=GRIDSPC)
 mats = pss.mats
 
 Cu1_T1 = 0.
@@ -52,7 +53,6 @@ PMMA_L1 = 8.e-3
 PMMA_L2 = 14.e-3
 pss.fill_rectangle(PMMA_L1,PMMA_T1,PMMA_L2,PMMA_T2,mats[3])
 
-r = 8
 pss.mesh_Shps[0,:,:],part_area = pss.gen_circle(r)
 
 i = np.where(abs(pss.yh-12.7e-3)<pss.GS/2.)
@@ -73,4 +73,4 @@ plt.imshow(view_mesh,interpolation='nearest',cmap = 'Reds')
 #plt.imshow(pss.materials[4,:,:],interpolation='nearest',cmap='Reds_r')
 plt.show()
 
-pss.save_general_mesh()
+pss.save_general_mesh(mixed=False)
