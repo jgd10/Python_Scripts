@@ -595,10 +595,24 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None):
     	j_finl   = LY
     
     temp_shape = shape[I_initial:I_final,J_initial:J_final]												# record the shape as a temporary array for area calculation
+    NI, NJ = np.shape(temp_shape)
+    for o in range(NI):
+        for p in range(NJ):
+            if temp_shape[o,p] == 1.: 
+                if MATS == None:
+                    materials[:,o+i_edge,p+j_edge] *= 0.
+                    materials[mat-1,o+i_edge,p+j_edge] = 1.
+                else:
+                    MATS[:,o+i_edge,p+j_edge] *= 0.
+                    MATS[mat-1,o+i_edge,p+j_edge] = 1.
+    """
     if MATS == None:
+        materials[:,indices] *= 0.
         materials[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],materials[mat-1,i_edge:i_finl,j_edge:j_finl])
     else:
-        MATS[mat-1,i_edge:i_finl,j_edge:j_finl] = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
+        MATS[:,indices] *= 0.
+        MATS[mat-1,i_edge:i_finl,j_edge:j_finl]      = np.maximum(shape[I_initial:I_final,J_initial:J_final],MATS[mat-1,i_edge:i_finl,j_edge:j_finl])
+    """
     #objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
     #objects_temp[objects_temp>0.]                = obj
     #objects[mat-1,i_edge:i_finl,j_edge:j_finl]   = objects_temp 
