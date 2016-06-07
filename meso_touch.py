@@ -7,12 +7,12 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .65
+vol_frac   = .3
 X_cells    = 500 
 Y_cells    = 500 
 PR         = 0.
-cppr       = 8 
-vfraclimit = .0                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+cppr       = 20 
+vfraclimit = .5                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
@@ -45,7 +45,8 @@ cppr_range = pss.cppr_max - pss.cppr_min
 print pss.cppr_min,pss.cppr_max
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
     r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
-    pss.mesh_Shps[i,:,:],part_area[i] = pss.gen_circle(r)
+    pss.mesh_Shps[i,:,:] = pss.gen_circle(r)
+    part_area[i] = np.sum(pss.mesh_Shps[i,:,:])
     part_radii.append(r)
 
 
@@ -91,6 +92,7 @@ try:
             J_shape.append(J)
     
         elif vol_placed_frac < vfraclimit*vol_frac:
+            #elif J%2 == 0:
             if ii >= MM: ii = 0
             I = random.randint(nmin,nmax)                    # Generate a random number to randomly select one of the generated shapes, to be tried for this loop
             fail = 1
