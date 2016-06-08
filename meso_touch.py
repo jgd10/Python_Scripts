@@ -7,11 +7,11 @@ import pySALESetup as pss
 import time
 
 
-vol_frac   = .3
+vol_frac   = .5
 X_cells    = 500 
 Y_cells    = 500 
 PR         = 0.
-cppr       = 20 
+cppr       = 20
 vfraclimit = .5                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
@@ -39,15 +39,18 @@ MM = pss.Ms
 """ #######   GENERATE n+1 Particles - to be placed in appropriate distribution  ####### """
 """ #################################################################################### """
 n = pss.N                                 # Particles can be placed MORE than once!
-part_area        = np.zeros((n))
+part_area  = np.zeros((n))
 part_radii = []
 cppr_range = pss.cppr_max - pss.cppr_min
-print pss.cppr_min,pss.cppr_max
+#r = np.zeros((n,6))+cppr #+ cppr*np.random.randn(6)/4.
+#r = np.random.randn(n)*np.sqrt(cppr_range) + cppr
+#print r
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
-    r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
-    pss.mesh_Shps[i,:,:] = pss.gen_circle(r)
+    #r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
+    pss.mesh_Shps[i,:,:] = pss.gen_polygon(6,r)
+    #pss.mesh_Shps[i,:,:] = pss.gen_ellipse(r[i],random.random()*np.pi,.8)
     part_area[i] = np.sum(pss.mesh_Shps[i,:,:])
-    part_radii.append(r)
+    part_radii.append(cppr)
 
 
 """ #################################################################################### """
@@ -87,7 +90,7 @@ try:
             placed_part_area.append(area)                    # Update the list of areas
             xcoords.append(x)
             ycoords.append(y)
-            radii.append(part_radii[I])
+            radii.append(np.amax(part_radii[I]))
             I_shape.append(I)
             J_shape.append(J)
     
@@ -104,7 +107,7 @@ try:
             placed_part_area.append(area)                    # Update the list of areas
             xcoords.append(x)
             ycoords.append(y)
-            radii.append(part_radii[I])
+            radii.append(np.amax(part_radii[I]))
             I_shape.append(I)
             J_shape.append(J)
         else: 
@@ -116,7 +119,7 @@ try:
             placed_part_area.append(area)                    # Update the list of areas
             xcoords.append(x)
             ycoords.append(y)
-            radii.append(part_radii[I])
+            radii.append(np.amax(part_radii[I]))
             I_shape.append(I)
             J_shape.append(J)
         
@@ -158,7 +161,7 @@ for item in XY:
 """
 
 
-MAT = pss.mat_assignment(mats,xcr,ycr,radii)
+MAT      = pss.mat_assignment(mats,xcr,ycr,radii)
 DMY      = np.zeros_like(xcoords)
 xcr     *= GRIDSPC
 ycr     *= GRIDSPC
@@ -166,14 +169,15 @@ zcr     *= GRIDSPC
 radii   *= GRIDSPC
 
 
-A,B = pss.part_distance(xcr,ycr,radii,MAT,True)
+A,B = pss.part_distance(xcr,ycr,radii,MAT,False)
 print "The Contacts Measure, A = {}".format(A)
 print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
-pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
-print 'save to meso_A-{:3.4f}.iSALE'.format(A)
+#pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
+#print 'save to meso_A-{:3.4f}.iSALE'.format(A)
+pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)
 
 
 timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
@@ -187,10 +191,14 @@ if abs(vol_frac_calc - pss.vol_frac) <= 0.02:
 else:
     print "FAILURE. Volume Fraction = {:3.3f}%".format(vol_frac_calc*100.)
 
-plt.figure(3)
-plt.imshow(pss.mesh, cmap='Greys',  interpolation='nearest')
-#for KK in range(pss.Ms):
-#	plt.figure()
-#	plt.imshow(pss.materials[KK,:,:], cmap='Greys',  interpolation='nearest')
+
+plt.figure()
+for KK in range(pss.Ms):
+    matter = np.copy(pss.materials[KK,:,:])*(KK+1)
+    matter = np.ma.masked_where(matter==0.,matter)
+    plt.imshow(matter, cmap='plasma',vmin=0,vmax=pss.Ms,interpolation='nearest')
+#plt.axis('equal')
+plt.xlim(0,pss.meshx)
+plt.ylim(0,pss.meshy)
 plt.show()
 
