@@ -130,7 +130,7 @@ def gen_shape_fromtxt(fname='shape.txt'):
     shape.txt MUST be of the same shape as mesh0
     """
     global mesh0, Ns																					# mesh0 is Ns x Ns in size
-    M = np.genfromtxt(fname,comments='#')
+    M = np.genfromtxt(fname,comments='#',delimiter=',')
     assert np.shape(M) == np.shape(mesh0), 'ERROR: the shapes mesh is not the same as the mesh0'
     mesh0 = M
     return mesh0
@@ -150,7 +150,7 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False):
     and the last coordinate MUST be identical to the first
 
     """
-    global mesh0, Ns,cppr_max																					# mesh0 is Ns x Ns in size
+    global mesh0, Ns,cppr_max                                        	# mesh0 is Ns x Ns in size
     J = np.genfromtxt(fname,comments='#',usecols=0)*Ns
     I = np.genfromtxt(fname,comments='#',usecols=1)*Ns
     assert J[0] == J[-1] and I[0] == I[-1], 'ERROR: The last vertex in the file must be the same as the first'
@@ -178,12 +178,12 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False):
                 if mixed == False:                                                          
                     mesh0[j,i] = 1.0
                 elif mixed == True:
-				    xx = np.linspace(i,i+1,11)												
-				    yy = np.linspace(j,j+1,11)												
-				    for ii in range(10):
-				    	for jj in range(10):																	
-				    		xxc = .5*(xx[ii]+xx[ii+1]) - x0														  
-				    		yyc = .5*(yy[jj]+yy[jj+1]) - y0
+                    xx = np.linspace(i,i+1,11)                        
+                    yy = np.linspace(j,j+1,11)                        
+                    for ii in range(10):
+                    	for jj in range(10):                                	
+                            xxc = .5*(xx[ii]+xx[ii+1]) - x0                              
+                            yyc = .5*(yy[jj]+yy[jj+1]) - y0
                             sx  = xxc - qx                                                                        
                             sy  = yyc - qy           
                             intersection = 0                                                                      
@@ -437,7 +437,7 @@ def check_coords_full(shape,x,y):
     return CHECK																						# has material in it in the main mesh => failure and CHECK = 1
 
 
-def drop_shape_into_mesh(shape,rr):
+def drop_shape_into_mesh(shape):
     """
     This function 'drops' a particle into the mesh and has it undergo a random walk
     until it overlaps sufficiently with another particle and is declared 'touching'.
@@ -600,7 +600,7 @@ def insert_shape_into_mesh(shape,x0,y0):
     area = np.sum(temp_shape)                                                                            # Area is sum of all these points
     return area
 
-def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,mixed=False):
+def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
     """
     This function inserts the shape (passed as the array 'shape') into the
     correct materials mesh at coordinate x0, y0.
@@ -651,7 +651,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,mixed=False):
     
     temp_shape = shape[J_initial:J_final,I_initial:I_final]												# record the shape as a temporary array for area calculation
     NJ, NI = np.shape(temp_shape)
-    if mixed == False:
+    if Mixed == False:
         for o in range(J_final-J_initial):
             for p in range(I_final-I_initial):
                 if temp_shape[o,p] == 1.: 
@@ -665,7 +665,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,mixed=False):
                             MATS[mat-1,o+j_edge,p+i_edge] = 1.
                         else:
                             pass
-    elif mixed == True:
+    elif Mixed == True:
         for o in range(J_final-J_initial):
             for p in range(I_final-I_initial):
                 if temp_shape[o,p] > 0.: 
@@ -775,7 +775,7 @@ def mat_basic(mats,N):
 
 
 
-def mat_assignment(mats,xc,yc,r):						
+def mat_assignment(mats,xc,yc):						
 	"""
 	This function has the greatest success and is based on that used in JP Borg's work with CTH.
 
@@ -809,10 +809,10 @@ def mat_assignment(mats,xc,yc,r):
 
 	Returns array 'MAT' containg a material number for every particle
 	"""
-	global cppr_max
-	N    = np.size(r)																					# No. of particles
+	global cppr_max,GS
+	N    = np.size(xc)																					# No. of particles
 	M    = np.size(mats)
-	L    = np.amax(r)/cppr_max																			# Length of one cell
+	L    = GS               																			# Length of one cell
 	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
 	i = 0																								# Counts the number of particles that have been assigned
 	while i < N:																						# Loop every particle and assign each one in turn.	
@@ -1087,8 +1087,7 @@ def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE',mixed=False):
     YI    = np.zeros((meshx*meshy))
     for k in range(n):
         mmm = MATS[k]
-        place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm)
-    
+        place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed)
     K = 0
     materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
     for i in range(meshx):
@@ -1178,7 +1177,7 @@ def check_FRACs(FRAC,mixed):
     """
     
     global Ms,meshx,meshy
-    if mixed:
+    if mixed==True:
         for i in range(meshx*meshy):
         	SUM = np.sum(FRAC[:,i])
         	if SUM > 1.:
@@ -1458,4 +1457,26 @@ def find_centroid(x,y):
         Cx /= (6.*A)
         Cy /= (6.*A)
     return Cx,Cy
+
+
+def smooth_mesh(MMM):
+    ny, nx = np.shape(MMM)
+    edges = np.zeros_like(MMM)
+
+    for i in range(nx-1):
+        for j in range(ny-1):
+            if MMM[j-1,i] >= .99: edges[j,i] += 1.
+            if MMM[j+1,i] >= .99: edges[j,i] += 1.
+            if MMM[j,i-1] >= .99: edges[j,i] += 1.
+            if MMM[j,i+1] >= .99: edges[j,i] += 1.
+    MMM[(edges<2)*(MMM>0.)] *= .5 
+    MMM[edges==2] = 0
+    MMM[(edges>2.)*(MMM<1.)] += .5
+    MMM[MMM>1.] = 1.
+
+    #plt.figure()
+    #plt.imshow(MMM,vmin=0,vmax=1,cmap='binary',interpolation='nearest')
+    #plt.show()
+
+    return MMM
 
