@@ -776,75 +776,75 @@ def mat_basic(mats,N):
 
 
 def mat_assignment(mats,xc,yc):						
-	"""
-	This function has the greatest success and is based on that used in JP Borg's work with CTH.
+    """
+    This function has the greatest success and is based on that used in JP Borg's work with CTH.
 
-	Function to assign material numbers to each particle
-	This function tries to optimise the assignments such
-	that as few particles of the same material are in co
-	ntact as possible. It works by creating an array of
-	all the particle material numbers within a box, 6 x 6
-	radii around each particle coord, as well as the corres
-	ponding coords.
+    Function to assign material numbers to each particle
+    This function tries to optimise the assignments such
+    that as few particles of the same material are in co
+    ntact as possible. It works by creating an array of
+    all the particle material numbers within a box, 6 x 6
+    radii around each particle coord, as well as the corres
+    ponding coords.
 
-	Then they are sorted into the order closest -> furthest.
-	Only the first M are considered (in this order). M is
-	the number of different materials being used. The
-	corresponding array of materials is checked against mats.
-	
-	If they contain all the same elements, there are no repeats
-	and all material numbers are used up => use that of the 
-	particle furthest away.
+    Then they are sorted into the order closest -> furthest.
+    Only the first M are considered (in this order). M is
+    the number of different materials being used. The
+    corresponding array of materials is checked against mats.
+    
+    If they contain all the same elements, there are no repeats
+    and all material numbers are used up => use that of the 
+    particle furthest away.
 
-	If they do not, there is at least one repeat, select the
-	remaining material number or randomly select one of those
-	left, if there are more than one.
+    If they do not, there is at least one repeat, select the
+    remaining material number or randomly select one of those
+    left, if there are more than one.
 
-	Continue until all the particles are assigned.
-	
-	mats : array containing all the material numbers to be assigned
-	xc   : All the x coords of each particle centre. (array)
-	yc   :  "   "  y  "     "   "      "       "   . (array)
-	r    :  "   "  radii    "   "      "    . (array)
+    Continue until all the particles are assigned.
+    
+    mats : array containing all the material numbers to be assigned
+    xc   : All the x coords of each particle centre. (array)
+    yc   :  "   "  y  "     "   "      "       "   . (array)
+    r    :  "   "  radii    "   "      "    . (array)
 
-	Returns array 'MAT' containg a material number for every particle
-	"""
-	global cppr_max,GS
-	N    = np.size(xc)																					# No. of particles
-	M    = np.size(mats)
-	L    = GS               																			# Length of one cell
-	MAT  = np.zeros((N))																				# Array for all material numbers of all particles
-	i = 0																								# Counts the number of particles that have been assigned
-	while i < N:																						# Loop every particle and assign each one in turn.	
-		lowx   = xc[i] - cppr_max*L*6.																	# Create a 'box' around each particle (in turn) 
-																										# that is 4 diameters by 4 diameters
-		higx   = xc[i] + cppr_max*L*6.
-		lowy   = yc[i] - cppr_max*L*6.
-		higy   = yc[i] + cppr_max*L*6.
-		boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]											# Array containing a list of all material numbers within the 'box' 
-		boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]											# Array containing the corresponding xcoords
-		boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]											# and the ycoords
-		nn     =  np.size(boxmat)
-		D      = np.zeros_like(boxmat)																	# Empty array for the distances
-		for ii in range(nn):																			# Loop over each elelment and calc the distances to the current particle
-			D[ii] = (boxx[ii] - xc[i])**2. + (boxy[ii] - yc[i])**2.										# No need to root it as we are only interestd in the order
-		ind = np.argsort(D)																				# Sort the particles into order of distance from the considered particle
-		BXM= boxmat[ind]																				# Sort the materials into the corresponding order
-		DU = np.unique(BXM[:M])																			# Only select the M closest particles
-		if np.array_equal(DU, mats):																	# If the unique elements in this array equate the array of 
-																										# materials then all are taken
-			mm     = BXM[M-1]                                                                           
-			MAT[i] = mm																				# Set the particle material to be of the one furthest from 
-																										# the starting particle
-			materials[materials==-1*(i+1)] = mm                                                         # Assign all filled cells 
-		else:																							# Else there is a material in mats that is NOT in DU
-			indices = np.in1d(mats,DU,invert=True)														# This finds the indices of all elements that only appear in 
-																										# mats and not DU
-			mm      = np.random.choice(mats[indices],1)
-			MAT[i]  = mm																	# Randomly select one to be the current particle's material number
-			materials[materials==-1*(i+1)] = mm
-		i += 1																							# Increment i
-	return MAT
+    Returns array 'MAT' containg a material number for every particle
+    """
+    global cppr_max,GS
+    N    = np.size(xc)                                            # No. of particles
+    M    = np.size(mats)
+    L    = GS                                                       # Length of one cell
+    MAT  = np.zeros((N))                                        # Array for all material numbers of all particles
+    i = 0                                                # Counts the number of particles that have been assigned
+    while i < N:                                            # Loop every particle and assign each one in turn.    
+        lowx   = xc[i] - cppr_max*L*6.                                    # Create a 'box' around each particle (in turn) 
+                                                        # that is 4 diameters by 4 diameters
+        higx   = xc[i] + cppr_max*L*6.
+        lowy   = yc[i] - cppr_max*L*6.
+        higy   = yc[i] + cppr_max*L*6.
+        boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing a list of all material numbers within the 'box' 
+        boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing the corresponding xcoords
+        boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # and the ycoords
+        nn     =  np.size(boxmat)
+        D      = np.zeros_like(boxmat)                                    # Empty array for the distances
+        for ii in range(nn):                                        # Loop over each elelment and calc the distances to the current particle
+            D[ii] = (boxx[ii] - xc[i])**2. + (boxy[ii] - yc[i])**2.                    # No need to root it as we are only interestd in the order
+        ind = np.argsort(D)                                        # Sort the particles into order of distance from the considered particle
+        BXM= boxmat[ind]                                        # Sort the materials into the corresponding order
+        DU = np.unique(BXM[:M])                                        # Only select the M closest particles
+        if np.array_equal(DU, mats):                                    # If the unique elements in this array equate the array of 
+                                                        # materials then all are taken
+            mm     = BXM[M-1]                                                                           
+            MAT[i] = mm                                        # Set the particle material to be of the one furthest from 
+                                                    # the starting particle
+            materials[materials==-1*(i+1)] = mm                                                         # Assign all filled cells 
+        else:                                                # Else there is a material in mats that is NOT in DU
+            indices = np.in1d(mats,DU,invert=True)                            # This finds the indices of all elements that only appear in 
+                                                    # mats and not DU
+            mm      = np.random.choice(mats[indices],1)
+            MAT[i]  = mm                                    # Randomly select one to be the current particle's material number
+            materials[materials==-1*(i+1)] = mm
+        i += 1                                                # Increment i
+    return MAT
 
 
 def part_distance(X,Y,radii,MAT,plot=False):
