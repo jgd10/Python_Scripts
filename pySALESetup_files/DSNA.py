@@ -9,6 +9,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import pySALESetup as pss
 
 def aspect_ratio(A):
     Diameters = []
@@ -23,10 +24,10 @@ Ns = 50
 mesh0 = np.zeros((Ns,Ns))
 D = 30
 S = 0.0                                    # Default atm
-S_ = np.arange(0,1,.2)
+S_ = np.arange(0,1,.5)
 N = 12
 A = 0.1
-A_ = np.linspace(0.01,0.3,5)
+A_ = np.linspace(0.1,0.3,2)
 mixed = True
 
 if N%2 != 0:
@@ -67,7 +68,7 @@ for AA in A_:
         qy = 0.                                                                                 
         x0 = Ns/2 
         y0 = Ns/2
-        plt.figure()
+        #plt.figure()
         for j in range(Ns):                                                                     
             for i in range(Ns):                                                                 
                 xc = i - x0                                                       
@@ -98,10 +99,16 @@ for AA in A_:
                                mesh0[j,i] += 0.1**2.
         np.savetxt('grain_aspect-{:3.3f}_mesh.txt'.format(aspect),mesh0,delimiter=',', fmt='%1.4f',header='# full mini-mesh of grain. Ns = {}, mixed = True, D, S, N, A = {}, {}, {}, {}'.format(aspect,D,SS,N,AA))
         
+        #print np.amax(mesh1)
+        #mesh0 -= mesh1
+        mesh_0 = np.copy(mesh0)
+        plt.figure(1)
         plt.imshow(mesh0,cmap='binary',interpolation='nearest',vmin=0,vmax=1)
+        plt.figure(2)        
+        for k in range(5):
+            mesh_0 = pss.smooth_mesh(mesh_0)
+        plt.imshow(pss.smooth_mesh(mesh_0),cmap='binary',interpolation='nearest',vmin=0,vmax=1)
         #plt.plot(x0,y0,color='r',marker='o')
         #plt.plot(I+Ns/2,J+Ns/2,marker='o',color='b')
-        plt.xlim(0,Ns)
-        plt.ylim(0,Ns)
         plt.show()
     
