@@ -162,12 +162,12 @@ for item in XY:
 """
 
 
-MAT      = pss.mat_assignment(mats,xcr,ycr)
-DMY      = np.zeros_like(xcoords)
 xcr     *= GRIDSPC
 ycr     *= GRIDSPC
 zcr     *= GRIDSPC
 radii   *= GRIDSPC
+MAT      = pss.mat_assignment(mats,xcr,ycr)
+DMY      = np.zeros_like(xcoords)
 
 
 A,B = pss.part_distance(xcr,ycr,radii,MAT,False)
