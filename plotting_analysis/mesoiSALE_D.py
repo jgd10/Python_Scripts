@@ -112,8 +112,8 @@ def Dstra_1(A,filepath = 'meso.iSALE',plot=False):
     
         ax.set_xlabel('Transverse \nPosition [Radii]',fontsize=14)
         ax.set_ylabel('Longitudinal \nPosition [Radii]',fontsize=14)
-    
-    K = (np.mean(gdist)/np.mean(gdist+2*(steps+1))) * 100.
+    gdist = np.array(gdist) 
+    K = (np.mean(gdist[gdist!=np.inf])/np.mean(gdist[gdist!=np.inf]+2*(steps+1))) * 100.
     ax.set_title('$K = ${:1.1f}% '.format(K),fontsize=16)
     plt.tight_layout()
     plt.savefig('gaps_Dijk1_figure_A-{}_K-{:1.3f}percent.pdf'.format(A,K),format='pdf',dpi=600,bbox_inches='tight')		                				 # Save the figure
