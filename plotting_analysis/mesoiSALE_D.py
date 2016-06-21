@@ -57,7 +57,7 @@ def Dstra_1(A,filepath = 'meso.iSALE',plot=False):
     gapgraph = np.ma.masked_where(gapgraph==np.inf,gapgraph)
     graph    = np.ma.masked_where(graph==np.inf,graph)
     
-    nn    = 10
+    nn    = int((np.amax(Y)-np.amin(Y)+2.*np.amax(R))/2.*np.mean(R))
     end   = np.zeros((nn),dtype=int)
     start = np.arange(nn,dtype = int)						# Start points are the 10 closest to the impactor
     dist  = np.zeros((nn))
