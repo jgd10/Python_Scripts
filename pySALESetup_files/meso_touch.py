@@ -12,7 +12,7 @@ X_cells    = 500
 Y_cells    = 500 
 PR         = 0.
 cppr       = 20
-vfraclimit = .5                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+vfraclimit = 1.                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
@@ -42,13 +42,14 @@ n = pss.N                                 # Particles can be placed MORE than on
 part_area  = np.zeros((n))
 part_radii = []
 cppr_range = pss.cppr_max - pss.cppr_min
+r = cppr
 #r = np.zeros((n,6))+cppr #+ cppr*np.random.randn(6)/4.
 #r = np.random.randn(n)*np.sqrt(cppr_range) + cppr
 #print r
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
     #r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
-    pss.mesh_Shps[i,:,:] = pss.gen_polygon(6,r)
-    #pss.mesh_Shps[i,:,:] = pss.gen_ellipse(r[i],random.random()*np.pi,.8)
+    #pss.mesh_Shps[i,:,:] = pss.gen_polygon(6,r)
+    pss.mesh_Shps[i,:,:] = pss.gen_ellipse(r,random.random()*np.pi,np.sqrt(8./9.))
     part_area[i] = np.sum(pss.mesh_Shps[i,:,:])
     part_radii.append(cppr)
 
@@ -113,7 +114,7 @@ try:
         else: 
             if ii >= MM: ii = 0
             I = random.randint(nmin,nmax)                    # Generate a random number to randomly select one of the generated shapes, to be tried for this loop
-            x,y,area = pss.drop_shape_into_mesh(pss.mesh_Shps[I,:,:],part_radii[I])
+            x,y,area = pss.drop_shape_into_mesh(pss.mesh_Shps[I,:,:])
             J += 1
             ii+= 1
             placed_part_area.append(area)                    # Update the list of areas
@@ -145,10 +146,10 @@ radii     = np.array(radii)
 XINT      = np.copy(xcr)
 YINT      = np.copy(ycr)
 
-xcr   =   xcr.astype(float)
-ycr   =   ycr.astype(float)
-zcr   =   zcr.astype(float)
-radii = radii.astype(float)
+xcr       =   xcr.astype(float)
+ycr       =   ycr.astype(float)
+zcr       =   zcr.astype(float)
+radii     = radii.astype(float)
 
 
 
@@ -161,7 +162,7 @@ for item in XY:
 """
 
 
-MAT      = pss.mat_assignment(mats,xcr,ycr,radii)
+MAT      = pss.mat_assignment(mats,xcr,ycr)
 DMY      = np.zeros_like(xcoords)
 xcr     *= GRIDSPC
 ycr     *= GRIDSPC
