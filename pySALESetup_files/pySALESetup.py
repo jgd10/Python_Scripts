@@ -810,14 +810,14 @@ def mat_assignment(mats,xc,yc):
     Returns array 'MAT' containg a material number for every particle
     """
     global cppr_max,GS
-    N    = np.size(xc)                                            # No. of particles
+    N    = np.size(xc)                                                               # No. of particles
     M    = np.size(mats)
-    L    = GS                                                       # Length of one cell
-    MAT  = np.zeros((N))                                        # Array for all material numbers of all particles
-    i = 0                                                # Counts the number of particles that have been assigned
-    while i < N:                                            # Loop every particle and assign each one in turn.    
-        lowx   = xc[i] - cppr_max*L*6.                                    # Create a 'box' around each particle (in turn) 
-                                                        # that is 4 diameters by 4 diameters
+    L    = GS                                                                        # Length of one cell
+    MAT  = np.zeros((N))                                                             # Array for all material numbers of all particles
+    i = 0                                                                            # Counts the number of particles that have been assigned
+    while i < N:                                                                     # Loop every particle and assign each one in turn.    
+        lowx   = xc[i] - cppr_max*L*6.                                               # Create a 'box' around each particle (in turn) 
+                                                                                     # that is 4 diameters by 4 diameters
         higx   = xc[i] + cppr_max*L*6.
         lowy   = yc[i] - cppr_max*L*6.
         higy   = yc[i] + cppr_max*L*6.
@@ -825,25 +825,25 @@ def mat_assignment(mats,xc,yc):
         boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing the corresponding xcoords
         boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # and the ycoords
         nn     =  np.size(boxmat)
-        D      = np.zeros_like(boxmat)                                    # Empty array for the distances
-        for ii in range(nn):                                        # Loop over each elelment and calc the distances to the current particle
-            D[ii] = (boxx[ii] - xc[i])**2. + (boxy[ii] - yc[i])**2.                    # No need to root it as we are only interestd in the order
-        ind = np.argsort(D)                                        # Sort the particles into order of distance from the considered particle
-        BXM= boxmat[ind]                                        # Sort the materials into the corresponding order
-        DU = np.unique(BXM[:M])                                        # Only select the M closest particles
-        if np.array_equal(DU, mats):                                    # If the unique elements in this array equate the array of 
-                                                        # materials then all are taken
+        D      = np.zeros_like(boxmat)                                               # Empty array for the distances
+        for ii in range(nn):                                                         # Loop over each elelment and calc the distances to the current particle
+            D[ii] = (boxx[ii] - xc[i])**2. + (boxy[ii] - yc[i])**2.                  # No need to root it as we are only interestd in the order
+        ind = np.argsort(D)                                                          # Sort the particles into order of distance from the considered particle
+        BXM= boxmat[ind]                                                             # Sort the materials into the corresponding order
+        DU = np.unique(BXM[:M])                                                      # Only select the M closest particles
+        if np.array_equal(DU, mats):                                                 # If the unique elements in this array equate the array of 
+                                                                                     # materials then all are taken
             mm     = BXM[M-1]                                                                           
-            MAT[i] = mm                                        # Set the particle material to be of the one furthest from 
-                                                    # the starting particle
-            materials[materials==-1*(i+1)] = mm                                                         # Assign all filled cells 
-        else:                                                # Else there is a material in mats that is NOT in DU
-            indices = np.in1d(mats,DU,invert=True)                            # This finds the indices of all elements that only appear in 
-                                                    # mats and not DU
+            MAT[i] = mm                                                              # Set the particle material to be of the one furthest from 
+                                                                                     # the starting particle
+            materials[materials==-1*(i+1)] = mm                                      # Assign all filled cells 
+        else:                                                                        # Else there is a material in mats that is NOT in DU
+            indices = np.in1d(mats,DU,invert=True)                                   # This finds the indices of all elements that only appear in 
+                                                                                     # mats and not DU
             mm      = np.random.choice(mats[indices],1)
-            MAT[i]  = mm                                    # Randomly select one to be the current particle's material number
+            MAT[i]  = mm                                                             # Randomly select one to be the current particle's material number
             materials[materials==-1*(i+1)] = mm
-        i += 1                                                # Increment i
+        i += 1                                                                       # Increment i
     return MAT
 
 
@@ -932,7 +932,10 @@ def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     MATERIAL : X0 : Y0 : RADIUS
     This can be read by iSALE. NB X,Y and R are in physical units
     """
-    fname += '_A-{:3.4f}.iSALE'.format(A)
+    if fname == 'meso':
+        fname += '_A-{:3.4f}.iSALE'.format(A)
+    else:
+        pass
     
     ALL  = np.column_stack((MATS,X,Y,R))                                                
     np.savetxt(fname,ALL,comments='')
