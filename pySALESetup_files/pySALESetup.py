@@ -828,18 +828,17 @@ def mat_assignment(mats,xc,yc):
 
     Returns array 'MAT' containg a material number for every particle
     """
-    global cppr_max,GS
+    global cppr_max,GS,Ns
     N    = np.size(xc)                                                               # No. of particles
     M    = np.size(mats)
     L    = GS                                                                        # Length of one cell
     MAT  = np.zeros((N))                                                             # Array for all material numbers of all particles
     i = 0                                                                            # Counts the number of particles that have been assigned
     while i < N:                                                                     # Loop every particle and assign each one in turn.    
-        lowx   = xc[i] - cppr_max*L*6.                                               # Create a 'box' around each particle (in turn) 
-                                                                                     # that is 4 diameters by 4 diameters
-        higx   = xc[i] + cppr_max*L*6.
-        lowy   = yc[i] - cppr_max*L*6.
-        higy   = yc[i] + cppr_max*L*6.
+        lowx   = xc[i] - 2.*Ns*L                                                     # Create a 'box' around each particle (in turn) that is 4Ns x 4Ns
+        higx   = xc[i] + 2.*Ns*L
+        lowy   = yc[i] - 2.*Ns*L
+        higy   = yc[i] + 2.*Ns*L
         boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing a list of all material numbers within the 'box' 
         boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing the corresponding xcoords
         boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # and the ycoords
@@ -943,6 +942,7 @@ def part_distance(X,Y,radii,MAT,plot=False):
         plt.show()
     
     return A, B
+
 
 def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
@@ -1085,6 +1085,53 @@ def particle_gap_measure(filepath = 'meso.iSALE',plot=False):
     	plt.savefig('gaps_figure_G-{:1.3f}.png'.format(G),dpi=600)		                				 # Save the figure
     	plt.show()
     return G
+
+def discrete_contacts_number(SHAPENO,X,Y,n,PN):
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    mesh                *= 0.
+    contacts             = np.zeros_like(PN)
+    contact_matrix = np.zeros((n,n))
+    for k in range(n):
+        shape = np.copy(mesh_Shps[SHAPENO[k]])
+        shape[shape>0] = PN[k]
+        area = insert_shape_into_mesh(shape,X[k],Y[k])
+
+    for i in range(meshx):
+        for j in range(meshy):
+            if mesh[j,i] > 0:
+                J = min(j,meshy-2)
+                J = max(1,J)
+                I = min(i,meshx-2)
+                I = max(1,I)
+                cel = mesh[J,I]
+                top = mesh[J+1,I]
+                bot = mesh[J-1,I]
+                lef = mesh[J,I-1]
+                rit = mesh[J,I+1]
+                if top > 0. and top != cel and contact_matrix[top-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == top] += 1
+                    contact_matrix[top-1,cel-1] += 1.
+                    contact_matrix[cel-1,top-1] += 1.
+                if bot > 0. and bot != cel and contact_matrix[bot-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == bot] += 1
+                    contact_matrix[bot-1,cel-1] += 1.
+                    contact_matrix[cel-1,bot-1] += 1.
+                if lef > 0. and lef != cel and contact_matrix[lef-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == lef] += 1
+                    contact_matrix[lef-1,cel-1] += 1.
+                    contact_matrix[cel-1,lef-1] += 1.
+                if rit > 0. and rit != cel and contact_matrix[rit-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == rit] += 1
+                    contact_matrix[rit-1,cel-1] += 1.
+                    contact_matrix[cel-1,rit-1] += 1.
+    A = np.mean(contacts)
+
+    return A, contact_matrix
+
 
 def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE',mixed=False):
     """
