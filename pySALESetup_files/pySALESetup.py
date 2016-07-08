@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GridSpc=2.e-6):
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GridSpc=2.e-6,NS=None):
     """
     This function generates the global mesh that all particles will be inserted into.
     Initially it reads in several parameters and renames them within the module. Then 
@@ -41,7 +41,10 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GridSpc=2.e-6)
     objects   = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
     xh        = np.arange(meshx+1)*GS                                                                      # arrays of physical positions of cell BOUNDARIES (not centres)
     yh        = np.arange(meshy+1)*GS
-    Ns        = 2*(cppr_max)+2                                                                             # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
+    if NS == None:
+        Ns        = 2*(cppr_max)+2                                                                             # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
+    else:
+        Ns = NS
     N         = 20                                                                                         # N is the number of different particles that can be generated  
     part_area = np.zeros((N))
     mesh0     = np.zeros((Ns,Ns))                                                                          # Generate mesh that is square and slightly larger than the max particle size
@@ -112,8 +115,8 @@ def gen_circle(r_):
     """
     global mesh0, Ns																					# mesh0 is Ns x Ns in size
     mesh0[:] = 0.																						# Ensure that mesh0 is all zeros (as it should be before this is called)
-    x0 = cppr_max + 1.																					# Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-    y0 = cppr_max + 1.																					# Define x0, y0 to be the centre of the mesh
+    x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+    y0 = float(Ns)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
     for j in range(Ns):																					# Iterate through all the x- and y-coords
         for i in range(Ns):						
             xc = 0.5*(i + (i+1)) - x0																	# Convert current coord to position relative to (x0,y0) 
@@ -157,8 +160,8 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False):
     
     qx = 0.                                                                                 
     qy = 0.                                                                                 
-    x0 = cppr_max + 1. 
-    y0 = cppr_max + 1.                                                                      
+    x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+    y0 = float(Ns)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
     for j in range(Ns):                                                                     
         for i in range(Ns):                                                                 
             xc = 0.5*(i + (i+1)) - x0                                                       
@@ -216,8 +219,8 @@ def gen_ellipse(r_,a_,e_):
     """
     global mesh0, Ns
     assert e_ >= 0. and e_ < 1., 'error: invalid value of eccentricity. e must be: 0 <= e < 1'
-    x0 = cppr_max + 1.
-    y0 = cppr_max + 1.
+    x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+    y0 = float(Ns)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
     mesh0 *= 0.																						# A safety feature to ensure that mesh0 is always all 0. before starting
     A = r_
     B = A*np.sqrt(1.-e_**2.)																			# A is the semi-major radius, B is the semi-minor radius
@@ -317,8 +320,8 @@ def gen_polygon(vertices,radii,angles=None):
                                                                                                         # Convert into cartesian coords and store in R
     qx = 0.                                                                                                # Make the reference point (q) zero, i.e. the centre of the shape
     qy = 0.                                                                                                # All dimensions are in reference to the central coordinates.
-    x0 = cppr_max + 1.  
-    y0 = cppr_max + 1.                                                                                    # Define x0, y0 to be the centre of the mesh
+    x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
+    y0 = float(Ns)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
     for j in range(Ns-1):                                                                                # Iterate through all the x- and y-coords
         for i in range(Ns-1):                                                                            # N-1 because we want the centres of each cell, 
                                                                                                         # and there are only N-1 of these!
@@ -389,11 +392,15 @@ def check_coords_full(shape,x,y):
     if x < 0-cppr_max:  CHECK = 1
     if y > meshy+cppr_max: CHECK = 1
     if y < 0-cppr_max:  CHECK = 1																		# If the coord moves out of the mesh, wrap back around.
-    i_edge   = x - cppr_max - 1																		    # Location of the edge of the polygon's mesh, within the main mesh.
-    j_edge   = y - cppr_max - 1
-    i_finl   = x + cppr_max + 1											    							# The indices refer to the close edge to the origin,
-    		                    										    							# the extra cell should be added on the other side
-    j_finl   = y + cppr_max + 1											    							# i.e. the side furthest from the origin
+    i_edge    = x - Ns/2
+    j_edge    = y - Ns/2
+    i_finl    = x + Ns/2
+    j_finl    = y + Ns/2
+    #i_edge   = x - cppr_max - 1																		    # Location of the edge of the polygon's mesh, within the main mesh.
+    #j_edge   = y - cppr_max - 1
+    #i_finl   = x + cppr_max + 1											    							# The indices refer to the close edge to the origin,
+    		                    									    	    							# the extra cell should be added on the other side
+    #j_finl   = y + cppr_max + 1											    							# i.e. the side furthest from the origin
     	
     if i_edge < 0:														    							# If the coords have the particle being generated over the mesh boundary
         I_initial = abs(i_edge)											    							# This bit checks for this, and reassigns a negative starting
@@ -465,11 +472,15 @@ def drop_shape_into_mesh(shape):
         if x < 0-cppr_max:  x = Nx+cppr_max-1
         if y > Ny+cppr_max: y = 0-cppr_max+1
         if y < 0-cppr_max:  y = Ny+cppr_max-1                                                            # If the coord moves out of the mesh, wrap back around.
-        i_edge   = x - cppr_max - 1                                                                        # Location of the edge of the polygon's mesh, within the main mesh.
-        j_edge   = y - cppr_max - 1
-        i_finl   = x + cppr_max + 1                                                                        # The indices refer to the close edge to the origin,
+        i_edge    = x - Ns/2
+        j_edge    = y - Ns/2
+        i_finl    = x + Ns/2
+        j_finl    = y + Ns/2
+        #i_edge   = x - cppr_max - 1                                                                        # Location of the edge of the polygon's mesh, within the main mesh.
+        #j_edge   = y - cppr_max - 1
+        #i_finl   = x + cppr_max + 1                                                                        # The indices refer to the close edge to the origin,
                                                                                                         # the extra cell should be added on the other side
-        j_finl   = y + cppr_max + 1                                                                        # i.e. the side furthest from the origin
+        #j_finl   = y + cppr_max + 1                                                                        # i.e. the side furthest from the origin
             
         if i_edge < 0:                                                                                  # If the coords have the particle being generated over the mesh boundary
             I_initial = abs(i_edge)                                                                     # This bit checks for this, and reassigns a negative starting
@@ -557,11 +568,15 @@ def insert_shape_into_mesh(shape,x0,y0):
     """
     global mesh, meshx, meshy, cppr_max, materials
     Py, Px = np.shape(shape)                                                                            # Px and Py are the dimensions of the 'shape' array
-    i_edge = x0 - cppr_max - 1                                                                            # Location of the edge of the polygon's mesh, within the main mesh.
-    j_edge = y0 - cppr_max - 1                                                                            # This is calculated explicitly in case the mesh has a non-constant size
-    i_finl = x0 + cppr_max + 1                                                                            # The indices refer to the closest edge to the origin,
+    i_edge    = x0 - Ns/2
+    j_edge    = y0 - Ns/2
+    i_finl    = x0 + Ns/2
+    j_finl    = y0 + Ns/2
+    #i_edge = x0 - cppr_max - 1                                                                            # Location of the edge of the polygon's mesh, within the main mesh.
+    #j_edge = y0 - cppr_max - 1                                                                            # This is calculated explicitly in case the mesh has a non-constant size
+    #i_finl = x0 + cppr_max + 1                                                                            # The indices refer to the closest edge to the origin,
                                                                                                         # an extra cell is added either side
-    j_finl = y0 + cppr_max + 1                                                                            # to ensure the shape is completely encompassed within the box
+    #j_finl = y0 + cppr_max + 1                                                                            # to ensure the shape is completely encompassed within the box
     
     """ 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
     if i_edge < 0:                                                                                        # Condition if the coords have the particle being generated 
@@ -613,16 +628,20 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
     
     nothing is returned.
     """
-    global mesh, meshx, meshy, cppr_max, materials
+    global mesh, meshx, meshy, cppr_max, materials,Ns
     if MATS == None: MATS = materials                                                                   # Now the materials mesh is only the default. Another mesh can be used!
     if LX   == None: LX   = meshx                                                                       # The code should still work as before.
     if LY   == None: LY   = meshy
     Py, Px = np.shape(shape)																			# Px and Py are the dimensions of the 'shape' array
-    i_edge = x0 - cppr_max - 1																			# Location of the edge of the polygon's mesh, within the main mesh.
-    j_edge = y0 - cppr_max - 1																			# This is calculated explicitly in case the mesh has a non-constant size
-    i_finl = x0 + cppr_max + 1																			# The indices refer to the closest edge to the origin,
-    																									# an extra cell is added either side
-    j_finl = y0 + cppr_max + 1																			# to ensure the shape is completely encompassed within the box
+    i_edge    = x0 - Ns/2
+    j_edge    = y0 - Ns/2
+    i_finl    = x0 + Ns/2
+    j_finl    = y0 + Ns/2
+    #i_edge = x0 - cppr_max - 1                                                                            # Location of the edge of the polygon's mesh, within the main mesh.
+    #j_edge = y0 - cppr_max - 1                                                                            # This is calculated explicitly in case the mesh has a non-constant size
+    #i_finl = x0 + cppr_max + 1                                                                            # The indices refer to the closest edge to the origin,
+                                                                                                        # an extra cell is added either side
+    #j_finl = y0 + cppr_max + 1                                                                            # to ensure the shape is completely encompassed within the box
     mat = int(mat) 
     """ 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
     if i_edge < 0:																						# Condition if the coords have the particle being generated 
@@ -809,18 +828,17 @@ def mat_assignment(mats,xc,yc):
 
     Returns array 'MAT' containg a material number for every particle
     """
-    global cppr_max,GS
+    global cppr_max,GS,Ns
     N    = np.size(xc)                                                               # No. of particles
     M    = np.size(mats)
     L    = GS                                                                        # Length of one cell
     MAT  = np.zeros((N))                                                             # Array for all material numbers of all particles
     i = 0                                                                            # Counts the number of particles that have been assigned
     while i < N:                                                                     # Loop every particle and assign each one in turn.    
-        lowx   = xc[i] - cppr_max*L*6.                                               # Create a 'box' around each particle (in turn) 
-                                                                                     # that is 4 diameters by 4 diameters
-        higx   = xc[i] + cppr_max*L*6.
-        lowy   = yc[i] - cppr_max*L*6.
-        higy   = yc[i] + cppr_max*L*6.
+        lowx   = xc[i] - 2.*Ns*L                                                     # Create a 'box' around each particle (in turn) that is 4Ns x 4Ns
+        higx   = xc[i] + 2.*Ns*L
+        lowy   = yc[i] - 2.*Ns*L
+        higy   = yc[i] + 2.*Ns*L
         boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing a list of all material numbers within the 'box' 
         boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing the corresponding xcoords
         boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # and the ycoords
@@ -924,6 +942,7 @@ def part_distance(X,Y,radii,MAT,plot=False):
         plt.show()
     
     return A, B
+
 
 def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
@@ -1066,6 +1085,53 @@ def particle_gap_measure(filepath = 'meso.iSALE',plot=False):
     	plt.savefig('gaps_figure_G-{:1.3f}.png'.format(G),dpi=600)		                				 # Save the figure
     	plt.show()
     return G
+
+def discrete_contacts_number(SHAPENO,X,Y,n,PN):
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    mesh                *= 0.
+    contacts             = np.zeros_like(PN)
+    contact_matrix = np.zeros((n,n))
+    for k in range(n):
+        shape = np.copy(mesh_Shps[SHAPENO[k]])
+        shape[shape>0] = PN[k]
+        area = insert_shape_into_mesh(shape,X[k],Y[k])
+
+    for i in range(meshx):
+        for j in range(meshy):
+            if mesh[j,i] > 0:
+                J = min(j,meshy-2)
+                J = max(1,J)
+                I = min(i,meshx-2)
+                I = max(1,I)
+                cel = mesh[J,I]
+                top = mesh[J+1,I]
+                bot = mesh[J-1,I]
+                lef = mesh[J,I-1]
+                rit = mesh[J,I+1]
+                if top > 0. and top != cel and contact_matrix[top-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == top] += 1
+                    contact_matrix[top-1,cel-1] += 1.
+                    contact_matrix[cel-1,top-1] += 1.
+                if bot > 0. and bot != cel and contact_matrix[bot-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == bot] += 1
+                    contact_matrix[bot-1,cel-1] += 1.
+                    contact_matrix[cel-1,bot-1] += 1.
+                if lef > 0. and lef != cel and contact_matrix[lef-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == lef] += 1
+                    contact_matrix[lef-1,cel-1] += 1.
+                    contact_matrix[cel-1,lef-1] += 1.
+                if rit > 0. and rit != cel and contact_matrix[rit-1,cel-1] == 0.:
+                    contacts[PN == cel]   += 1
+                    contacts[PN == rit] += 1
+                    contact_matrix[rit-1,cel-1] += 1.
+                    contact_matrix[cel-1,rit-1] += 1.
+    A = np.mean(contacts)
+
+    return A, contact_matrix
+
 
 def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE',mixed=False):
     """
