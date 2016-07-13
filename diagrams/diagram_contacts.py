@@ -10,21 +10,21 @@ ax = fig.add_subplot(111,aspect='equal')
 circle1 = plt.Circle((0.,0.3),.5,color='k',alpha=.5)     ##  # give each one a color based on their material number. 
 circle2 = plt.Circle((1.73,-.64),.5,color='k',alpha=.25) #
 circle3 = plt.Circle((-1.,0.3),.5,color='k',alpha=.75)   ##
-circle4 = plt.Circle((0.,-1.5),.5,color='k',alpha=.25)
-circle5 = plt.Circle((-0.9,-1.),.5,color='k',alpha=.75)
+circle4 = plt.Circle((0.,-1.5),.5,color='k',alpha=.25)   ###
+circle5 = plt.Circle((-0.9,-1.),.5,color='k',alpha=.75)  ###
 circle6 = plt.Circle((1.,2.),.5,color='k',alpha=.25)     ##
 circle7 = plt.Circle((.6,1.1),.5,color='k')              ##
 circle8 = plt.Circle((-2,1),.5,color='k')
 circle9 = plt.Circle((-2.5,2),.5,color='k',alpha=.75)
 circle10= plt.Circle((-1.2,1.9),.5,color='k',alpha=.25)
-circle11= plt.Circle((-1.4,-1.9),.5,color='k')
+circle11= plt.Circle((-1.4,-1.9),.5,color='k')           ###
 circle12= plt.Circle((1.2,-2.5),.5,color='k',alpha=.5)
 circle13= plt.Circle((-2.4,-1),.5,color='k',alpha=.75)
 circle14= plt.Circle((2.1,-1.56),.5,color='k',alpha=.5)  #
 circle15= plt.Circle((2.5,0.),.5,color='k')              #
 circle16= plt.Circle((2.2,1.5),.5,color='k',alpha=.5)
-circle17= plt.Circle((0.1,-2.7),.5,color='k',alpha=.75)
-circle18= plt.Circle((-1.3,-3.),.5,color='k',alpha=.5)
+circle17= plt.Circle((0.1,-2.7),.5,color='k',alpha=.75) 
+circle18= plt.Circle((-1.3,-3.),.5,color='k',alpha=.5)   
 circle19= plt.Circle((3.,2.8),.5,color='k')
 circle20= plt.Circle((3,-2.7),.5,color='k',alpha=.75)
 circle21= plt.Circle((-2.6,-2.8),.5,color='k',alpha=.5)
@@ -34,6 +34,7 @@ circle24= plt.Circle((-3.3,0.01),.5,color='k',alpha=.75)
 
 plt.plot([-1,0,.6,1],[0.3,0.3,1.1,2],color='w',lw=2.)
 plt.plot([2.1,1.73,2.5],[-1.56,-.64,0],color='w',lw=2.)
+plt.plot([-1.4,-.9,0.],[-1.9,-1.,-1.5],color='w',lw=2.)
 
 ax.annotate("1",(-1.1,-0.1),color='w')
 ax.annotate("2",(0.,0.),color='w')
@@ -43,6 +44,10 @@ ax.annotate("1",(1.15,1.9),color='w')
 ax.annotate("1",(2.2,-1.56),color='w')
 ax.annotate("2",(1.4,-.8),color='w')
 ax.annotate("1",(2.6,0),color='w')
+
+ax.annotate("1",(-1.7,-1.9),color='w')
+ax.annotate("2",(-.9,-.9),color='w')
+ax.annotate("1",(0.,-1.4),color='w')
 
 ax.set_xticks([])
 ax.set_yticks([])
