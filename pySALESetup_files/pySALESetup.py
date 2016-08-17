@@ -7,32 +7,33 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,e = 0.,GridSpc=2.e-6,NS=None):
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None):
     """
     This function generates the global mesh that all particles will be inserted into.
     Initially it reads in several parameters and renames them within the module. Then 
     several arrays are initialised, both of the main mesh and the 'shape' meshes (mesh0)
 
-    X    : The x-length of the mesh, in cells
-    Y    : The y-length of the mesh, in cells
-    CPPR : The chosen value of cells per particle radius
-    pr   : The particle size range (a fraction). The range of particle sizes that will be produced
-    VF   : The volume fraction. AKA the ratio of particle to void we want to achieve
+    X        : The x-length of the mesh, in cells
+    Y        : The y-length of the mesh, in cells
+    CPPR     : The chosen value of cells per particle radius
+    pr       : The particle size range (a fraction). The range of particle sizes that will be produced
+    VF       : The volume fraction. AKA the ratio of particle to void we want to achieve
+    GridSpc  : The physical length of one cell. [m]
+    NS       : Length [cells] of one side of the 'mini mesh' used to hold the generated shapes/grains 
 
-    Nothing is returned but many factors become global.
+    Nothing is returned but many variables become global.
 
     NB. Recently I have updated 'N' to now be the number of different particles that can be generated
     and NOT N**2. 19-01-16
     """
-    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,eccen,materials,Ms,mats,objects,FRAC,OBJID,GS
+    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS
     GS        = GridSpc
     Ms        = mat_no                                                                                    # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
-    meshx      = X
-    meshy      = Y
+    meshx     = X
+    meshy     = Y
     cppr_mid  = CPPR
     PR        = pr
-    eccen     = e                                                                                          # Eccentricity of ellipses. e = 0. => circle. 0 <= e < 1
     cppr_min  = int((1-PR)*cppr_mid)                                                                       # Min No. cells/particle radius 
     cppr_max  = int((1+PR)*cppr_mid)                                                                       # Max No. cells/particle radius
     vol_frac  = VF                                                                                         # Target fraction by volume of parts:void
@@ -835,20 +836,18 @@ def mat_assignment(mats,xc,yc):
     MAT  = np.zeros((N))                                                             # Array for all material numbers of all particles
     i = 0                                                                            # Counts the number of particles that have been assigned
     while i < N:                                                                     # Loop every particle and assign each one in turn.    
-        lowx   = xc[i] - 2.*Ns*L                                                     # Create a 'box' around each particle (in turn) that is 4Ns x 4Ns
-        higx   = xc[i] + 2.*Ns*L
-        lowy   = yc[i] - 2.*Ns*L
-        higy   = yc[i] + 2.*Ns*L
-        boxmat = MAT[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing a list of all material numbers within the 'box' 
-        boxx   =  xc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # Array containing the corresponding xcoords
-        boxy   =  yc[(lowx<xc)*(xc<higx)*(lowy<yc)*(yc<higy)]                        # and the ycoords
+        lowx   = xc[i] - 3.*Ns*L                                                     # Create a 'box' around each particle (in turn) that is 6Ns x 6Ns
+        higx   = xc[i] + 3.*Ns*L
+        lowy   = yc[i] - 3.*Ns*L
+        higy   = yc[i] + 3.*Ns*L
+        boxmat = MAT[(lowx<=xc)*(xc<=higx)*(lowy<=yc)*(yc<=higy)]                    # Array containing a list of all material numbers within the 'box' 
+        boxx   =  xc[(lowx<=xc)*(xc<=higx)*(lowy<=yc)*(yc<=higy)]                    # Array containing the corresponding xcoords
+        boxy   =  yc[(lowx<=xc)*(xc<=higx)*(lowy<=yc)*(yc<=higy)]                    # and the ycoords
         nn     =  np.size(boxmat)
-        D      = np.zeros_like(boxmat)                                               # Empty array for the distances
-        for ii in range(nn):                                                         # Loop over each elelment and calc the distances to the current particle
-            D[ii] = (boxx[ii] - xc[i])**2. + (boxy[ii] - yc[i])**2.                  # No need to root it as we are only interestd in the order
+        D   = np.sqrt((boxx - xc[i])**2. + (boxy - yc[i])**2.)                       # Calculate the distances to the nearest particles
         ind = np.argsort(D)                                                          # Sort the particles into order of distance from the considered particle
-        BXM= boxmat[ind]                                                             # Sort the materials into the corresponding order
-        DU = np.unique(BXM[:M])                                                      # Only select the M closest particles
+        BXM = boxmat[ind]                                                            # Sort the materials into the corresponding order
+        DU  = np.unique(BXM[:M])                                                     # Only select the M closest particles
         if np.array_equal(DU, mats):                                                 # If the unique elements in this array equate the array of 
                                                                                      # materials then all are taken
             mm     = BXM[M-1]                                                                           
@@ -1132,40 +1131,61 @@ def discrete_contacts_number(SHAPENO,X,Y,n,PN):
 
     return A, contact_matrix
 
+def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True): 
+    """
+    Function populates the materials meshes. Must be used after material assignment to particles before
+    any block material assignment, e.g. a matrix.
 
-def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE',mixed=False):
+    SHAPENO : The indexes of each shape within mesh_Shps
+    X       : The xcoord of the shape centre (in cells)
+    Y       : The ycoord of the shape centre (in cells)
+    MATS    : The array of each corresponding material number to each particle
+    n       : The total number of particles
+    mixed   : Whether cells can have multiple materials or not (yes => True, no => False)
+    
+    NB This function will remake the mesh but in the correct materials spaces.
+    """
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    for k in range(n):
+        mmm = MATS[k]
+        place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed)
+    return
+
+
+def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False):
     """
     A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
     This compiles the integer indices of each cell, as well as the material in them and the fraction
     of matter present. It saves all this as the filename specified by the user, with the default as 
     meso_m.iSALE
     
+    This version of the function works for continuous and solid materials, such as a multiple-plate setup.
+    It does not need to remake the mesh as there is no particular matter present.
+    
     fname   : The filename to be used for the text file being used
-    SHAPENO : The indexes of each shape within mesh_Shps
-    X       : The xcoord of the shape centre (in cells)
-    Y       : The ycoord of the shape centre (in cells)
-    MATS    : The array of each corresponding material number to each particle
-    n       : The total number of particles
     
     returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
-    
-    NB This function will remake the mesh.
     """
-    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,Ms
     XI    = np.zeros((meshx*meshy))    
     YI    = np.zeros((meshx*meshy))
-    for k in range(n):
-        mmm = MATS[k]
-        place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed)
-    K = 0
+    K     = 0
     materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
     for i in range(meshx):
         for j in range(meshy):
             XI[K] = i
             YI[K] = j
-            for mm in range(Ms):
-                FRAC[mm,K] = materials[mm,j,i]
-                OBJID[mm,K]= objects[mm,j,i]                                                        # each particle number
+            if invert:
+                if np.any(materials[:,j,i]):
+                    FRAC[:,K]*= 0.
+                else:
+                    FRAC[:,K]*= 0.
+                    FRAC[0,K] = 1.
+            else:
+                for mm in range(Ms):
+                    FRAC[mm,K] = materials[mm,j,i]
+                    OBJID[mm,K]= objects[mm,j,i]                                                        # each particle number
+
             K += 1
     FRAC = check_FRACs(FRAC,mixed)
     HEAD = '{},{}'.format(K,Ms)
@@ -1173,43 +1193,6 @@ def save_particle_mesh(SHAPENO,X,Y,MATS,n,fname='meso_m.iSALE',mixed=False):
     np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
     return
 
-def save_general_mesh(fname='meso_m.iSALE',mixed=True):
-	"""
-	A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
-	This compiles the integer indices of each cell, as well as the material in them and the fraction
-	of matter present. It saves all this as the filename specified by the user, with the default as 
-	meso_m.iSALE
-
-	This version of the function works for continuous and solid materials, such as a multiple-plate setup.
-	It does not need to remake the mesh as there is no particular matter present.
-
-	fname   : The filename to be used for the text file being used
-
-	returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
-	"""
-	global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
-	K = 0
-	XI    = np.zeros((meshx*meshy))	
-	YI    = np.zeros((meshx*meshy))
-	materials = materials[:,::-1,:]																		# Reverse array vertically, 
-																										# as it is read into iSALE upside down otherwise
-	for i in range(meshx):
-		for j in range(meshy):
-			XI[K] = i
-			YI[K] = j
-			for mm in range(Ms):
-				FRAC[mm,K] = materials[mm,j,i]
-			K += 1
-	FRAC = check_FRACs(FRAC,mixed)
-	HEAD = '{},{}'.format(K,Ms)
-	ALL  = np.column_stack((XI,YI,FRAC.transpose()))							# ,OBJID.transpose())) Only include if particle number needed
-    
-	#fig, ax = plt.subplots()
-	#cax = ax.imshow(materials[0,:,:],cmap='Greys',interpolation='nearest',vmin=0,vmax=1)
-	#cbar = fig.colorbar(cax, orientation='horizontal')
-	#plt.show()
-	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
-	return
 
 def populate_from_bmp(A):
 	global materials,Ms,FRAC
