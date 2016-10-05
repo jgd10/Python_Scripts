@@ -26,7 +26,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     NB. Recently I have updated 'N' to now be the number of different particles that can be generated
     and NOT N**2. 19-01-16
     """
-    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS
+    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh
     GS        = GridSpc
     Ms        = mat_no                                                                                    # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
@@ -38,6 +38,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     cppr_max  = int((1+PR)*cppr_mid)                                                                       # Max No. cells/particle radius
     vol_frac  = VF                                                                                         # Target fraction by volume of parts:void
     mesh      = np.zeros((meshy,meshx))
+    trmesh    = np.zeros((meshy,meshx))
     materials = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
     objects   = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
     xh        = np.arange(meshx+1)*GS                                                                      # arrays of physical positions of cell BOUNDARIES (not centres)
@@ -55,14 +56,14 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     OBJID     = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
 
 def unit_cell(LX=None,LY=None):
-    global meshx,meshy,cppr_mid,Ms
+    global meshx,meshy,cppr_mid,Ms,trmesh
     if LX == None: LX = int(meshx/10) 
     if LY == None: LY = int(meshy/10) 
     UC = np.zeros((Ms,LY,LX))
     return UC
 
 def copypasteUC(UC,UCX,UCY,RAD,MATS):
-    global meshx,meshy,materials
+    global meshx,meshy,materials,trmesh
     LY,LX = np.shape(UC[0,:,:])
     i  = 0
     ii = LX
@@ -616,7 +617,7 @@ def insert_shape_into_mesh(shape,x0,y0):
     area = np.sum(temp_shape)                                                                            # Area is sum of all these points
     return area
 
-def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
+def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,tracers=False,ONm=0):
     """
     This function inserts the shape (passed as the array 'shape') into the
     correct materials mesh at coordinate x0, y0.
@@ -629,7 +630,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
     
     nothing is returned.
     """
-    global mesh, meshx, meshy, cppr_max, materials,Ns
+    global mesh, meshx, meshy, cppr_max, materials,Ns,trmesh
     if MATS == None: MATS = materials                                                                   # Now the materials mesh is only the default. Another mesh can be used!
     if LX   == None: LX   = meshx                                                                       # The code should still work as before.
     if LY   == None: LY   = meshy
@@ -678,11 +679,13 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
                     if MATS == None:
                         if np.sum(materials[:,o+j_edge,p+i_edge]) == 0.:
                             materials[mat-1,o+j_edge,p+i_edge] = 1.
+                            if tracers: trmesh[o+j_edge,p+i_edge] = ONm
                         else:
                             pass
                     else:
                         if np.sum(MATS[:,o+j_edge,p+i_edge]) == 0.:
                             MATS[mat-1,o+j_edge,p+i_edge] = 1.
+                            if tracers: trmesh[o+j_edge,p+i_edge] = ONm
                         else:
                             pass
     elif Mixed == True:
@@ -697,6 +700,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
                         else:
                             new_mat = temp_shape[o,p]
                         materials[mat-1,o+j_edge,p+i_edge] += new_mat
+                        if tracers and temp_shape[o,p]>0.5: trmesh[o+j_edge,p+i_edge] = ONm
                     else:
                         tot_present = np.sum(MATS[:,o+j_edge,p+i_edge])
                         space_left = 1. - tot_present
@@ -705,6 +709,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False):
                         else:
                             new_mat = temp_shape[o,p]
                         MATS[mat-1,o+j_edge,p+i_edge] += new_mat
+                        if tracers and temp_shape[o,p]>0.5: trmesh[o+j_edge,p+i_edge] = ONm
 
     #objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
     #objects_temp[objects_temp>0.]                = obj
@@ -944,7 +949,7 @@ def part_distance(X,Y,radii,MAT,plot=False):
 
 
 def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
-    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,trmesh
     """
     Saves particle placement information in a meso.iSALE file in format:
     MATERIAL : X0 : Y0 : RADIUS
@@ -1131,7 +1136,7 @@ def discrete_contacts_number(SHAPENO,X,Y,n,PN):
 
     return A, contact_matrix
 
-def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True): 
+def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True,TRACERS=False,ON=None): 
     """
     Function populates the materials meshes. Must be used after material assignment to particles before
     any block material assignment, e.g. a matrix.
@@ -1145,14 +1150,17 @@ def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True):
     
     NB This function will remake the mesh but in the correct materials spaces.
     """
-    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,trmesh
     for k in range(n):
         mmm = MATS[k]
-        place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed)
+        if TRACERS:
+            place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed,tracers=TRACERS,ONm=ON[k])
+        else:
+            place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed)
     return
 
 
-def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False):
+def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False,tracers=False):
     """
     A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
     This compiles the integer indices of each cell, as well as the material in them and the fraction
@@ -1166,15 +1174,21 @@ def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False):
     
     returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
     """
-    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,Ms
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,Ms,trmesh
     XI    = np.zeros((meshx*meshy))    
     YI    = np.zeros((meshx*meshy))
+    OI    = np.zeros((meshx*meshy))
     K     = 0
-    materials = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
+    materials          = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
+    if tracers: trmesh =    trmesh[::-1,:]
     for i in range(meshx):
         for j in range(meshy):
             XI[K] = i
             YI[K] = j
+            if tracers:
+                OI[K] = trmesh[j,i]
+            else:
+                OI[K] = 0
             if invert:
                 if np.any(materials[:,j,i]):
                     FRAC[:,K]*= 0.
@@ -1190,35 +1204,39 @@ def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False):
     FRAC = check_FRACs(FRAC,mixed)
     HEAD = '{},{}'.format(K,Ms)
     ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    #ALL  = np.column_stack((XI,YI,OI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
     np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
     return
 
 
 def populate_from_bmp(A):
-	global materials,Ms,FRAC
-	fname = 'meso_m.iSALE'
+    global materials,Ms,FRAC
+    fname = 'meso_m.iSALE'
     #A = A[:,::-1]
-	ny, nx = np.shape(A)
-	generate_mesh(nx,ny,1)
-	XI    = np.zeros((nx*ny))	
-	YI    = np.zeros((nx*ny))
-	K = 0
-	for i in range(nx):
-		for j in range(ny):
-			XI[K] = i
-			YI[K] = j
-			FRAC[0,K] = 1. - A[j,i]
-			K += 1
-		
-	HEAD = '{},{}'.format(K,Ms)
-	ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    ny, nx = np.shape(A)
+    generate_mesh(nx,ny,np.amax(A))
+    XI    = np.zeros((nx*ny))	
+    YI    = np.zeros((nx*ny))
+    K = 0
+    for i in range(nx):
+        for j in range(ny):
+            XI[K] = i
+            YI[K] = j
+            if A[j,i] > 0.:
+                FRAC[A[j,i]-1,K] = 1. 
+            else:
+                FRAC[:,K] *= 0.
+            K += 1
+        
+    HEAD = '{},{}'.format(K,Ms)
+    ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
     
-	fig, ax = plt.subplots()
-	cax = ax.imshow(1.-A,cmap='Greys',interpolation='nearest',vmin=0,vmax=1)
-	cbar = fig.colorbar(cax, orientation='horizontal')
-	plt.show()
-	np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
-	return
+    fig, ax = plt.subplots()
+    cax = ax.imshow(A,cmap='Greys',interpolation='nearest')#,vmin=0,vmax=1)
+    cbar = fig.colorbar(cax, orientation='horizontal')
+    plt.show()
+    np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
+    return
 
 def check_FRACs(FRAC,mixed):
     """
@@ -1266,12 +1284,12 @@ def fill_plate(y1,y2,mat,invert=False):
             mesh[j,i]            = 1. - present_mat
     return
 
-def fill_rectangle(L1,T1,L2,T2,mat,invert=False):
+def fill_rectangle(L1,T1,L2,T2,mat,invert=False,tracers=False,ON=None):
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
     It fills all cells between y1 and y2.
     """
-    global meshx,meshy,materials,mesh,xh,yh
+    global meshx,meshy,materials,mesh,xh,yh,trmesh
     assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
     assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
     for i in range(meshx):
@@ -1283,14 +1301,15 @@ def fill_rectangle(L1,T1,L2,T2,mat,invert=False):
                     present_mat = np.sum(materials[:,j,i])                                                            # This ensures that plates override in the order they are placed.
                     materials[mat-1,j,i] = 1. - present_mat
                     mesh[j,i]            = 1. - present_mat
+                    if tracers and materials[mat-1,j,i]>0.5: trmesh[j,i] = ON
     return
 
-def fill_sinusoid(L1,T1,func,T2,mat,mixed=False):
+def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
     It fills all cells between y1 and y2.
     """
-    global meshx,meshy,materials,mesh,xh,yh,mats
+    global meshx,meshy,materials,mesh,xh,yh,mats,trmesh
     #assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
     assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
     for j in range(meshy):
@@ -1315,6 +1334,7 @@ def fill_sinusoid(L1,T1,func,T2,mat,mixed=False):
                     space_left = 1.-present_mat
                     new_mat = min(new_mat,space_left)
                     materials[mat-1,j,i] += new_mat
+                    if tracers and new_mat>0.5: trmesh[j,i] = ON
 
 
                 else:
@@ -1339,6 +1359,7 @@ def fill_sinusoid(L1,T1,func,T2,mat,mixed=False):
                 space_left = 1.-present_mat
                 new_mat = min(new_mat,space_left)
                 materials[mat-1,j,i] += new_mat
+                if tracers and new_mat>0.5: trmesh[j,i] = ON
     return
 
 def fill_above_line(r1,r2,mat,invert=False,mixed=False):
@@ -1353,7 +1374,7 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
     mixed  : logical to indicate if partially filled cells necessary
     """
     
-    global meshx,meshy,materials,mesh
+    global meshx,meshy,materials,mesh,trmesh
     AREA = 0.
     if mixed == True:                                                                                    # If there are to be mixed cells, then set MIX to 1.
         MIX = 1.
@@ -1424,7 +1445,7 @@ def fill_above_line(r1,r2,mat,invert=False,mixed=False):
                 pass
     return
 
-def fill_arbitrary_shape(X,Y,mat):						
+def fill_arbitrary_shape(X,Y,mat,tracers=False,ON=None):						
     """
     Function to fill an arbitrary shape in the mesh based on arrays of vertices.
     This version does NOT partially fill cells.
@@ -1432,7 +1453,7 @@ def fill_arbitrary_shape(X,Y,mat):
 
     X, Y      : Vertices in cells
     """
-    global mesh, materials,meshx,meshy                                                                    # Only the angles used are now randomly selected.
+    global mesh, materials,meshx,meshy,trmesh                                                                    # Only the angles used are now randomly selected.
     N      = np.size(X)
     R      = np.zeros((2,N))                                                                            # Array for the coords of the vertices
     x0,y0 = find_centroid(X,Y)
@@ -1473,6 +1494,7 @@ def fill_arbitrary_shape(X,Y,mat):
                 space_left  = 1.-present_mat
                 new_mat     = min(new_mat,space_left)
                 materials[mat-1,j,i] += new_mat
+                if tracers and new_mat>0.5: trmesh[j,i] = ON
 
     return
 
