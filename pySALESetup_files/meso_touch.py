@@ -9,12 +9,12 @@ import time
 
 vol_frac   = .5
 X_cells    = 500 
-Y_cells    = 500 
+Y_cells    = 1000 
 PR         = 0.
-cppr       = 20
-vfraclimit = 1.                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
+cppr       = 8
+vfraclimit = .5                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
-y_length   = 1.e-3
+y_length   = 2.e-3
 GRIDSPC    = x_length/X_cells
 mat_no     = 5
 
@@ -49,7 +49,8 @@ r = cppr
 for i in range(n):                            # n+1 as range starts at 0; i.e. you'll never get to i = n unless range goes to n+1!
     #r = pss.cppr_min + i*cppr_range/(n-1)                # generate radii that are incrementally greater for each circle produced
     #pss.mesh_Shps[i,:,:] = pss.gen_polygon(6,r)
-    pss.mesh_Shps[i,:,:] = pss.gen_ellipse(r,random.random()*np.pi,np.sqrt(8./9.))
+    #pss.mesh_Shps[i,:,:] = pss.gen_ellipse(r,random.random()*np.pi,np.sqrt(8./9.))
+    pss.mesh_Shps[i,:,:] = pss.gen_circle(r)
     part_area[i] = np.sum(pss.mesh_Shps[i,:,:])
     part_radii.append(cppr)
 
@@ -176,9 +177,14 @@ print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
-#pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
-#print 'save to meso_A-{:3.4f}.iSALE'.format(A)
-pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)
+pss.populate_materials(I_shape,XINT,YINT,MAT,J,TRACERS=True,ON=J_shape)      # Now populate the materials meshes (NB these are different to the 'mesh' and are
+pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
+print 'save to meso_A-{:3.4f}.iSALE'.format(A)
+pss.save_general_mesh(tracers=True)
+A2, contact_matrix = pss.discrete_contacts_number(I_shape,XINT,YINT,J,J_shape)
+print '\n'
+print "A and A2 are:", A, A2
+print '\n'
 
 
 timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
