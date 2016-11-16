@@ -5,6 +5,7 @@ import random
 import matplotlib.pyplot as plt
 import pySALESetup as pss
 import time
+import sys
 
 
 vol_frac   = .5
@@ -133,8 +134,11 @@ try:
             print '##########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##########'
             break
         old_vfrac = vol_placed_frac
-        print "volume fraction achieved so far: {:3.3f}%".format(vol_placed_frac*100)
-        
+        print "\rvolume fraction achieved so far: {:5.3f}%".format(vol_placed_frac*100),
+        sys.stdout.flush()
+
+    print
+
 except KeyboardInterrupt:
     pass
 I_shape   = np.array(I_shape)    
