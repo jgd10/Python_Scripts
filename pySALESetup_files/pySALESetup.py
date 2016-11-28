@@ -7,7 +7,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None):
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None,NP=20):
     """
     This function generates the global mesh that all particles will be inserted into.
     Initially it reads in several parameters and renames them within the module. Then 
@@ -28,14 +28,18 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     """
     global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh
     GS        = GridSpc
-    Ms        = mat_no                                                                                    # M is the number of materials within the mesh
+    Ms        = mat_no                                                                                     # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
     meshx     = X
     meshy     = Y
     cppr_mid  = CPPR
     PR        = pr
-    cppr_min  = int((1-PR)*cppr_mid)                                                                       # Min No. cells/particle radius 
-    cppr_max  = int((1+PR)*cppr_mid)                                                                       # Max No. cells/particle radius
+    if np.size(PR)>1:
+        cppr_min  = PR[0]*cppr_mid                                                                         # Min No. cells/particle radius 
+        cppr_max  = PR[1]*cppr_mid                                                                         # Max No. cells/particle radius
+    else:
+        cppr_max  = cppr_mid*(1.+PR)
+        cppr_min  = cppr_mid*(1.-PR)
     vol_frac  = VF                                                                                         # Target fraction by volume of parts:void
     mesh      = np.zeros((meshy,meshx))
     trmesh    = np.zeros((meshy,meshx))
@@ -43,15 +47,17 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     objects   = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
     xh        = np.arange(meshx+1)*GS                                                                      # arrays of physical positions of cell BOUNDARIES (not centres)
     yh        = np.arange(meshy+1)*GS
-    if NS == None:
-        Ns        = 2*(cppr_max)+2                                                                             # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
+    if NS is None:
+        Ns        = int(2*(cppr_max)+2)                                                                    # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
     else:
         Ns = NS
-    N         = 20                                                                                         # N is the number of different particles that can be generated  
+    N         = NP                                                                                         # N is the number of different particles that can be generated  
     part_area = np.zeros((N))
-    mesh0     = np.zeros((Ns,Ns))                                                                          # Generate mesh that is square and slightly larger than the max particle size
+    mesh0     = np.zeros((Ns,Ns))                                                                          # Generate mesh that is square and slightly larger than the max 
+                                                                                                           # particle size
                                                                                                            # This will be the base for any shapes that are generated
-    mesh_Shps = np.zeros((N,Ns,Ns))                                                                        # Generate an array of meshes of this size. of size N (Ns x Ns x N)
+    mesh_Shps = np.zeros((N,Ns,Ns))                                                                        # Generate an array of meshes of this size. of size 
+                                                                                                           # N (Ns x Ns x N)
     FRAC      = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
     OBJID     = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
 
