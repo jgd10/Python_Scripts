@@ -19,7 +19,7 @@ def tellme(s):
     plt.title(s,fontsize=16)
     plt.draw()
 def promptPoint(text=None):     
-    if text is not None: tellme('{}: zoom in on point, if necessary. \n hit any key to continue'.format(text))
+    if text is not None: tellme('{}: zoom in on point, if necessary. \n hit any key when ready'.format(text))
     while plt.waitforbuttonpress(timeout=-1) == False:  #returns false for clicks, and true for keypress
         pass                                            #timeout < 0 means it never timesout
     if text is not None: tellme('{}: click on the necessary pixel'.format(text))
@@ -95,7 +95,7 @@ CN  = np.size(CB_[:,0])
 nx,ny,dmy = np.shape(data)
 dummy     = np.ones((nx,ny,3))*-1.
 
-thresh  = np.array([8.,8.,8.])
+thresh  = np.array([10.,10.,10.])
 counter = 0
 total   = float(nx*ny)
 
