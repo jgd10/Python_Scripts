@@ -1220,7 +1220,9 @@ def populate_from_bmp(A):
     fname = 'meso_m.iSALE'
     #A = A[:,::-1]
     ny, nx = np.shape(A)
-    generate_mesh(nx,ny,np.amax(A))
+    ms    = np.unique(A)
+    Nms   = np.size(ms)
+    generate_mesh(nx,ny,np.amax(A),mat_no=Nms)
     XI    = np.zeros((nx*ny))    
     YI    = np.zeros((nx*ny))
     K = 0
@@ -1228,10 +1230,13 @@ def populate_from_bmp(A):
         for j in range(ny):
             XI[K] = i
             YI[K] = j
-            if A[j,i] > 0.:
-                FRAC[A[j,i]-1,K] = 1. 
-            else:
-                FRAC[:,K] *= 0.
+            M     = 0
+            for item in ms:
+                if A[j,i] == item:
+                    FRAC[M,K] = 1. 
+                else:
+                    FRAC[M,K] *= 0.
+                M += 1
             K += 1
         
     HEAD = '{},{}'.format(K,Ms)
