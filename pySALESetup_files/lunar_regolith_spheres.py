@@ -3,6 +3,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import sys
+import glob
 
 def function(x):
     A = 2.908
@@ -24,36 +25,47 @@ def DD_(x):
 vol_frac   = 1.
 Y_cells    = 500 
 X_cells    = 500 
-y_length   = 20.e-3                                                  # Transverse width of bed
-x_length   = 20.e-3                                                  # Longitudinal width of bed
+y_length   = 10.e-3                                                 # Transverse width of bed
+x_length   = 10.e-3                                                 # Longitudinal width of bed
 PR         = (0.1,3.0)                                              # Particle size range
 cppr       = 50                                                     # Cells per particle radius
-GRIDSPC    = x_length/X_cells                                        # Physical distance/cell
+GRIDSPC    = x_length/X_cells                                       # Physical distance/cell
 mat_no     = 7
 A_est      = vol_frac*X_cells*Y_cells #/(np.pi*(.25 * 1.e-3 * 2.**(-2.6))**2.)
 
 
-pss.generate_mesh(X=X_cells,Y=Y_cells,mat_no=mat_no,CPPR=cppr,pr=PR,VF=vol_frac,GridSpc=GRIDSPC,NP=10) 
+pss.generate_mesh(X=X_cells,Y=Y_cells,mat_no=mat_no,CPPR=cppr,pr=PR,VF=vol_frac,GridSpc=GRIDSPC,NP=100) 
 
 n = pss.N                                                           # n is the number of particles to generated for the 'library' which can be 
                                                                     # selected from this and placed into the mesh
 part_area = np.zeros((n))                                           # N.B. particles can (and likely will) be placed more than once
 part_phi  = np.linspace(PHI_(pss.cppr_max*GRIDSPC*1.e3*2.),PHI_(pss.cppr_min*GRIDSPC*1.e3*2.),n)
-part_radi = (DD_(part_phi)/(GRIDSPC*1.e3)).astype(int)                     # particle radii generated as linear range from the min to max
+part_radi = (DD_(part_phi)/(GRIDSPC*1.e3)).astype(int)              # particle radii generated as linear range from the min to max
 phi_tol   = abs(part_phi[1] - part_phi[0])                          # The 'tolerance' on each radius. A level of uncertainty
 part_freq = np.zeros((n)).astype(int)                               # An array to store the frequency of each grain size
 wasted_area = 0
+
+grains = glob.glob('../grain_library/regshapes/*.txt')
+MAXR   = np.amax(part_radi.astype(float))
 for i in range(n):
+    GRN                  = random.choice(grains)
     x                    = float(part_radi[i])
-    pss.mesh_Shps[i,:,:] = pss.gen_circle(int(x))                   # Generate a circle and store it in mesh_Shps (an array of meshes) 
-    part_area[i]         = np.sum(pss.mesh_Shps[i,:,:])
-    phi                  = -np.log2(part_radi[i]*2.*GRIDSPC*1.e3)   # For each radius, generate an equivalent phi. phi = -log2(2R)
+    rot                  = random.random()
+    temp_mesh0           = pss.gen_shape_fromvertices(fname=GRN, rot=rot)
+    ascale               = (x**2.)/(MAXR**2.)
+    A                    = np.sum(temp_mesh0)
+    newA                 = A*ascale
+    lgthscale            = np.sqrt(newA)
+    pss.mesh_Shps[i,:,:] = pss.gen_shape_fromvertices(fname=GRN,lengthscale=lgthscale, rot=rot)
+    #plt.figure(i)
+    #plt.axis('equal')
+    #plt.imshow(pss.mesh_Shps[i,:,:],cmap='binary',interpolation='nearest')
+    #plt.savefig('test{}.png'.format(i))
+    equiv_diam           = np.sqrt(np.sum(pss.mesh_Shps[i])/np.pi)*2.
+    part_area[i]         = np.sum(pss.mesh_Shps[i])
+    phi                  = -np.log2(equiv_diam*GRIDSPC*1.e3)   # For each radius, generate an equivalent phi. phi = -log2(2R)
     frq                  = lunar_pdf(phi,phi_tol)*A_est/part_area[i]
     part_freq[i]         = int(np.around(frq))                      # The frequency of that size is the integral of the pdf over the tolerance range
-    if part_freq[i] == 0:
-        wasted_area += frq*part_area[i]
-    if (wasted_area/part_area[i])>1.:
-        part_freq[i] += 1
                                                                     # i.e. Prob = |CDF(x+dx) - CDF(x-dx)|; expected freq is No. * Prob!
 
 print np.sum(part_freq*part_area)/A_est
