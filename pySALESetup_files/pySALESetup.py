@@ -146,10 +146,10 @@ def gen_shape_fromtxt(fname='shape.txt'):
     mesh0 = M
     return mesh0
 
-def gen_shape_fromvertices(fname='shape.txt',mixed=False):
+def gen_shape_fromvertices(fname='shape.txt',mixed=False,lengthscale=1.,rot=0.):
     """
     This function generates a mesh0 from a text file containing a list of its vertices
-    in normalised coordinates over a square grid of dimensions 1 x 1.
+    in normalised coordinates over a square grid of dimensions 1 x 1. Centre = (0,0)
     coordinates must be of the form:
     j   i
     x   x
@@ -162,10 +162,26 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False):
 
     """
     global mesh0, Ns,cppr_max                                            # mesh0 is Ns x Ns in size
-    J = np.genfromtxt(fname,comments='#',usecols=0)*Ns
-    I = np.genfromtxt(fname,comments='#',usecols=1)*Ns
-    assert J[0] == J[-1] and I[0] == I[-1], 'ERROR: The last vertex in the file must be the same as the first'
-    
+    mesh0 *= 0.
+    theta = 2.*np.pi*rot 
+    ct    = np.cos(theta)
+    st    = np.sin(theta)
+    J_    = np.genfromtxt(fname,comments='#',usecols=0,delimiter=',')
+    I_    = np.genfromtxt(fname,comments='#',usecols=1,delimiter=',')
+    MAXI  = np.amax(abs(I_))
+    MAXJ  = np.amax(abs(J_))
+    MAX   = max(MAXI,MAXJ)
+    J_   /= MAX 
+    I_   /= MAX 
+    J_   *= (Ns/2.)*lengthscale
+    I_   *= (Ns/2.)*lengthscale
+    J     = J_*ct - I_*st
+    I     = J_*st + I_*ct
+
+    if J[0] != J[-1]:
+        J = np.append(J,J[0])
+        I = np.append(I,I[0])
+    n = np.size(J)-1
     qx = 0.                                                                                 
     qy = 0.                                                                                 
     x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
