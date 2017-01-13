@@ -6,6 +6,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import matplotlib.path   as mpath
 
 def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None,NP=20):
     """
@@ -135,6 +136,13 @@ def gen_circle(r_):
                 mesh0[j,i] = 1.0                                                                        # Fill cell
     return mesh0
 
+def polygon_area(X,Y):
+    N = np.size(X)
+    A = 0
+    for i in range(1,N):
+        A += (X[i-1]*Y[i]-X[i]*Y[i-1])*.5
+    return abs(A)
+
 def gen_shape_fromtxt(fname='shape.txt'):
     """
     This function generates a mesh0 from a text file of ones and 0s.
@@ -146,7 +154,7 @@ def gen_shape_fromtxt(fname='shape.txt'):
     mesh0 = M
     return mesh0
 
-def gen_shape_fromvertices(fname='shape.txt',mixed=False,lengthscale=1.,rot=0.):
+def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min_res=5):
     """
     This function generates a mesh0 from a text file containing a list of its vertices
     in normalised coordinates over a square grid of dimensions 1 x 1. Centre = (0,0)
@@ -159,6 +167,14 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,lengthscale=1.,rot=0.):
     .   .
     .   .
     and the last coordinate MUST be identical to the first
+    --------------------------------------------------------------------------
+    |kwargs    |  Meaning                                                    | 
+    --------------------------------------------------------------------------
+    |mixed     |  partially filled cells on or off                           |
+    |rot       |  rotation of the grain (radians)                            |
+    |areascale |  Fraction between 0 and 1, indicates how to scale the grain |
+    |min_res   |  Minimum resolution allowed for a grain                     |
+    --------------------------------------------------------------------------
 
     """
     global mesh0, Ns,cppr_max                                            # mesh0 is Ns x Ns in size
@@ -173,63 +189,88 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,lengthscale=1.,rot=0.):
     MAX   = max(MAXI,MAXJ)
     J_   /= MAX 
     I_   /= MAX 
+    
+    if J_[0] != J_[-1]:
+        J_ = np.append(J_,J_[0])
+        I_ = np.append(I_,I_[0])
+
+    A_shape = polygon_area(I_,J_)
+    lengthscale  = np.sqrt((areascale*A_shape)/np.pi)                                                       # Shape area is scaled and equivalent radius found
+                                                                                                         # This is used as the lengthscale
     J_   *= (Ns/2.)*lengthscale
     I_   *= (Ns/2.)*lengthscale
     J     = J_*ct - I_*st
     I     = J_*st + I_*ct
-
-    if J[0] != J[-1]:
-        J = np.append(J,J[0])
-        I = np.append(I,I[0])
-    n = np.size(J)-1
+    
+    radii     = np.sqrt(I**2+J**2)
+    min_radii = np.amin(radii)
+    Failure   = False
+    if min_radii < min_res: Failure = True
+    n  = np.size(J)-1
     qx = 0.                                                                                 
     qy = 0.                                                                                 
     x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
     y0 = float(Ns)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
-    for j in range(Ns):                                                                     
-        for i in range(Ns):                                                                 
-            xc = 0.5*(i + (i+1)) - x0                                                       
-            yc = 0.5*(j + (j+1)) - y0                                                       
-            sx = xc - qx                                                                    
-            sy = yc - qy           
-            intersection = 0                                                                
-            for l in range(n):                                                              
-                rx = I[l+1] - I[l]                                                          
-                ry = J[l+1] - J[l]
-                RxS = (rx*sy-ry*sx)                                                         
-                if RxS!=0.:                                                                 
-                    t = ((qx-I[l])*sy - (qy-J[l])*sx)/RxS
-                    u = ((qx-I[l])*ry - (qy-J[l])*rx)/RxS
-                    if t<=1. and t>=0. and u<=1. and u>=0.: intersection = intersection + 1
-            if (intersection%2==0.):                                                        
-                if mixed == False:                                                          
-                    mesh0[j,i] = 1.0
-                elif mixed == True:
-                    xx = np.linspace(i,i+1,11)                        
-                    yy = np.linspace(j,j+1,11)                        
-                    for ii in range(10):
-                        for jj in range(10):                                    
-                            xxc = .5*(xx[ii]+xx[ii+1]) - x0                              
-                            yyc = .5*(yy[jj]+yy[jj+1]) - y0
-                            sx  = xxc - qx                                                                        
-                            sy  = yyc - qy           
-                            intersection = 0                                                                      
-                            for l in range(n):                                                                  
-                                rx = I[l+1] - I[l]                                                                
-                                ry = J[l+1] - J[l]
-                                RxS = (rx*sy-ry*sx)                                                               
-                                if RxS!=0.:                                                                       
-                                    t = ((qx-I[l])*sy - (qy-J[l])*sx)/RxS
-                                    u = ((qx-I[l])*ry - (qy-J[l])*rx)/RxS
-                                    if t<=1. and t>=0. and u<=1. and u>=0.:
-                                        intersection = intersection + 1
-                            if (intersection%2==0.):                                                        
-                                mesh0[j,i] += 0.1**2.
+    if Failure != True:
+        """
+        for j in range(Ns):                                                                     
+            for i in range(Ns):                                                                 
+                xc = 0.5*(i + (i+1)) - x0                                                       
+                yc = 0.5*(j + (j+1)) - y0                                                       
+                sx = xc - qx                                                                    
+                sy = yc - qy           
+                intersection = 0                                                                
+                for l in range(n):                                                              
+                    rx = I[l+1] - I[l]                                                          
+                    ry = J[l+1] - J[l]
+                    RxS = (rx*sy-ry*sx)                                                         
+                    if RxS!=0.:                                                                 
+                        t = ((qx-I[l])*sy - (qy-J[l])*sx)/RxS
+                        u = ((qx-I[l])*ry - (qy-J[l])*rx)/RxS
+                        if t<=1. and t>=0. and u<=1. and u>=0.: intersection = intersection + 1
+                if (intersection%2==0.):                                                        
+                    if mixed == False:                                                          
+                        mesh0[j,i] = 1.0
+                    elif mixed == True:
+                        xx = np.linspace(i,i+1,11)                        
+                        yy = np.linspace(j,j+1,11)                        
+                        for ii in range(10):
+                            for jj in range(10):                                    
+                                xxc = .5*(xx[ii]+xx[ii+1]) - x0                              
+                                yyc = .5*(yy[jj]+yy[jj+1]) - y0
+                                sx  = xxc - qx                                                                        
+                                sy  = yyc - qy           
+                                intersection = 0                                                                      
+                                for l in range(n):                                                                  
+                                    rx = I[l+1] - I[l]                                                                
+                                    ry = J[l+1] - J[l]
+                                    RxS = (rx*sy-ry*sx)                                                               
+                                    if RxS!=0.:                                                                       
+                                        t = ((qx-I[l])*sy - (qy-J[l])*sx)/RxS
+                                        u = ((qx-I[l])*ry - (qy-J[l])*rx)/RxS
+                                        if t<=1. and t>=0. and u<=1. and u>=0.:
+                                            intersection = intersection + 1
+                                if (intersection%2==0.):                                                        
+                                    mesh0[j,i] += 0.1**2.
+        """
+        I += x0
+        J += y0
+        path = mpath.Path(np.column_stack((I,J)))
+        for i in range(Ns):
+            for j in range(Ns):
+                in_shape = path.contains_point([i+.5,j+.5])
+                if in_shape and mixed == False: mesh0[i,j] = 1.
+                elif in_shape and mixed == True:
+                    for ii in np.arange(i,i+1,.1):
+                        for jj in np.arange(j,j+1,.1):
+                            in_shape2 = path.contains_point([ii+.05,jj+.05])
+                            if in_shape2: mesh0[i,j] += .01
+
     #plt.figure()
     #plt.imshow(mesh0,cmap='binary',interpolation='nearest')
     #plt.plot(x0,y0,color='r',marker='o')
     #plt.show()
-    return mesh0
+    return mesh0,Failure
 
 def gen_ellipse(r_,a_,e_):
     """
@@ -420,11 +461,6 @@ def check_coords_full(shape,x,y):
     j_edge    = y - Ns/2
     i_finl    = x + Ns/2
     j_finl    = y + Ns/2
-    #i_edge   = x - cppr_max - 1                                                                            # Location of the edge of the polygon's mesh, within the main mesh.
-    #j_edge   = y - cppr_max - 1
-    #i_finl   = x + cppr_max + 1                                                                            # The indices refer to the close edge to the origin,
-                                                                                                            # the extra cell should be added on the other side
-    #j_finl   = y + cppr_max + 1                                                                            # i.e. the side furthest from the origin
         
     if i_edge < 0:                                                                                        # If the coords have the particle being generated over the mesh boundary
         I_initial = abs(i_edge)                                                                            # This bit checks for this, and reassigns a negative starting
