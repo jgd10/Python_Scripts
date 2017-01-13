@@ -25,7 +25,7 @@ mesh0 = np.zeros((Ns,Ns))
 D = 30
 S = 0.0                                    # Default atm
 S_ = np.arange(0,1,.5)
-N = 12
+N = 5
 A = 0.1
 A_ = np.linspace(0.1,0.3,2)
 mixed = True
@@ -69,6 +69,7 @@ for AA in A_:
         x0 = Ns/2 
         y0 = Ns/2
         #plt.figure()
+        """
         for j in range(Ns):                                                                     
             for i in range(Ns):                                                                 
                 xc = i - x0                                                       
@@ -112,3 +113,4 @@ for AA in A_:
         #plt.plot(I+Ns/2,J+Ns/2,marker='o',color='b')
         plt.show()
     
+        """
