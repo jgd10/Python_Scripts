@@ -67,7 +67,7 @@ A_est         = vol_frac*X_cells*Y_cells #/(np.pi*(.25 * 1.e-3 * 2.**(-2.6))**2.
 A_total       = y_length*x_length
 
 
-pss.generate_mesh(X=X_cells,Y=Y_cells,mat_no=mat_no,CPPR=cppr,pr=PR,VF=vol_frac,GridSpc=GRIDSPC,NP=30) 
+pss.generate_mesh(X=X_cells,Y=Y_cells,mat_no=mat_no,CPPR=cppr,pr=PR,VF=vol_frac,GridSpc=GRIDSPC,NP=100) 
 
 n = pss.N                                                           # n is the number of particles to generated for the 'library' which can be 
                                                                     # selected from this and placed into the mesh
@@ -80,7 +80,7 @@ phi_tol   = abs(part_phi[1] - part_phi[0])/2.                       # The 'toler
 part_freq = np.zeros((n)).astype(int)                               # An array to store the frequency of each grain size
 wasted_area = 0
 
-grains = glob.glob('../grain_library/regshapes/*.txt')
+grains = glob.glob('../grain_library/regshapes/grain_area*.txt')
 MAXR   = np.amax(guide_radi.astype(float))
 ii = 0
 II = 0
@@ -105,7 +105,6 @@ while ii < n:
         frq                  = .5*theta*A_total/(part_area[ii]*(GRIDSPC**2.))
         part_freq[ii]        = int(np.around(frq))                      # The frequency of that size is the integral of the pdf over the tolerance range
         lost_area           += (frq-part_freq[ii])*part_area[ii]
-        print frq,(frq-part_freq[ii])
                                                                     # i.e. Prob = |CDF(x+dx) - CDF(x-dx)|; expected freq is No. * Prob!
     ii += 1
     II += 1
@@ -177,7 +176,7 @@ pss.populate_materials(I_,xc,yc,MAT,J)                              # Now popula
 
 #pss.fill_rectangle(0,0,pss.meshx*GRIDSPC,pss.meshy*GRIDSPC,pss.mats[0])
                                                                     # pySALESetup prioritises material placed sooner. So later things will NOT overwrite previous ones
-pss.save_general_mesh()                                             # Save the mesh as meso_m.iSALE (default)
+pss.save_general_mesh(fname = 'meso_m_Regolith_vfrac-{:3.2f}.iSALE'.format(vf_pld*100))                                             # Save the mesh as meso_m.iSALE (default)
 
 plt.figure()                                                        # plot the resulting mesh. Skip this bit if you do not need to.
 for KK in range(pss.Ms):
