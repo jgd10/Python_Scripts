@@ -1,14 +1,133 @@
 """  This is a module in-progress for use generating meso-setups to be put into iSALE """
 """ There is much to work on and more is being added all the time                     """
-""" Last edited - 19/01/16 - JGD                                                      """
+""" - 19/01/16 - JGD                                                                  """
 
 
 import numpy as np
 import random
 import matplotlib.pyplot as plt
 import matplotlib.path   as mpath
+from matplotlib.widgets import Slider, Button, RadioButtons
+import Tkinter
+import tkSimpleDialog as tksd
 
-def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None,NP=20):
+def interactive_setup():
+    fig, ax = plt.subplots(figsize=(15,10))
+    plt.subplots_adjust(left=0.4, bottom=0.2)
+    plt.axis([0, 1, -10, 10])
+    root = Tkinter.Tk()
+    root.withdraw()
+    
+    axcolor = 'lightgoldenrodyellow'
+    axcppr = plt.axes([0.1, 0.95, 0.15, 0.02], facecolor=axcolor)
+    axmatn = plt.axes([0.1, 0.90, 0.15, 0.02], facecolor=axcolor)
+    axpr__ = plt.axes([0.1, 0.85, 0.15, 0.02], facecolor=axcolor)
+    axXcls = plt.axes([0.1, 0.80, 0.15, 0.02], facecolor=axcolor)
+    axYcls = plt.axes([0.1, 0.75, 0.15, 0.02], facecolor=axcolor)
+    axvfrc = plt.axes([0.1, 0.60, 0.15, 0.02], facecolor=axcolor)
+    
+    scppr_ = Slider(axcppr, 'C.P.P.R.', 5, 50, valinit=15,valfmt='%1d')
+    smatno = Slider(axmatn, 'No. of Materials', 1, 9, valinit=5,valfmt='%1d')
+    spr___ = Slider(axpr__, 'Grain Size Range', 0, 1, valinit=0.2)
+    svfrac = Slider(axvfrc, 'Target \n Volume Fraction', 0., 1., valinit=0.5)
+    sXcell = Slider(axXcls, 'X cells', 10, 1000, valinit=500,valfmt='%03d')
+    sYcell = Slider(axYcls, 'Y cells', 10, 1000, valinit=500,valfmt='%03d')
+    
+    resetax = plt.axes([0.8, 0.025, 0.1, 0.04])
+    button1 = Button(resetax, 'Reset', color=axcolor, hovercolor='0.975')
+    
+    generateax = plt.axes([0.13, 0.675, 0.1, 0.04])
+    button2 = Button(generateax, 'Generate New Mesh', color=axcolor, hovercolor='0.975')
+    
+    addboxax = plt.axes([0.13, 0.5, 0.1, 0.04])
+    button3 = Button(addboxax, 'Draw Box', color=axcolor, hovercolor='0.975')
+    
+    
+    def draw_box(event):
+        x1 = tksd.askfloat('Bottom left x-coord [m]','Value:',initialvalue=0.)
+        y1 = tksd.askfloat('Bottom left y-coord [m]','Value:',initialvalue=0.)
+        x2 = tksd.askfloat('Top right x-coord [m]','Value:',initialvalue=1.)
+        y2 = tksd.askfloat('Top right y-coord [m]','Value:',initialvalue=1.)
+        mat= tksd.askinteger('Material No.','Value:',initialvalue=1)
+        fill_rectangle(x1,y1,x2,y2,mat)
+        update()
+    button3.on_clicked(draw_box)
+
+
+
+    def reset(event):
+        svfrac.reset()
+        sXcell.reset()
+        sYcell.reset()
+        smatno.reset()
+        spr___.reset()
+        scppr_.reset()
+    button1.on_clicked(reset)
+
+    def generate(event):
+        X = int(sXcell.val)
+        Y = int(sYcell.val)
+        M = int(smatno.val)
+        C = int(scppr_.val)
+        P = spr___.val
+        G = tksd.askfloat('GRIDSPC [m/cell]','Value:',initialvalue=2.e-6)
+        generate_mesh(X,Y,M,C,P,G)
+        update()
+    button2.on_clicked(generate)
+    def update():
+        ax.cla()
+        ax.imshow(mesh,cmap='binary',vmin=0,vmax=1,interpolation='nearest',origin='lower')
+        for KK in range(Ms):
+            matter = np.copy(materials[KK,:,:])*(KK+1)
+            matter = np.ma.masked_where(matter==0.,matter)
+            ax.imshow(matter, cmap='viridis',vmin=0,vmax=Ms,interpolation='nearest',origin='lower')        
+        ax.set_xlabel('metres')
+        ax.set_ylabel('metres')
+        ax.axvline(0,color='k',linestyle='--')
+        ax.axvline(meshx,color='k',linestyle='--')
+        ax.axhline(0,color='k',linestyle='--')
+        ax.axhline(meshy,color='k',linestyle='--')
+        ax.set_xticks([0,meshx/2,meshx])
+        ax.set_xticklabels([0,meshx*GS/2.,meshx*GS])
+        ax.set_yticks([0,meshy/2,meshy])
+        ax.set_yticklabels([0,meshy*GS/2.,meshy*GS])
+        ax.set_yticks(np.arange(meshy),np.arange(meshy)*GS)
+        ax.axis('equal')
+
+    rax = plt.axes([0.27, 0.92, 0.1, 0.05], axisbg=axcolor)
+    radio = RadioButtons(rax, ('circles', 'ellipses'), active=0)
+    
+    def generate_shapes(label):
+        rot = tksd.askstring('Randomly rotate shapes?','[Y/N]',initialvalue='N')
+        generate_particle_list(label,rot)
+    radio.on_clicked(generate_shapes)
+
+
+    plt.show()
+
+def generate_particle_list(shape,rotation=False):
+    cppr_range = cppr_max-cppr_min
+    if shape == 'ellipses': e = tksd.askfloat('Eccentricity of Ellipses','Value:',initialvalue=.5)
+    for i in range(N):
+        r = cppr_min + i*cppr_range/(N-1)
+        if rotation == 'Y':   
+            rot = random.random()*np.pi
+        else:
+            rot = 0.
+        if shape == 'circles':    mesh_Shps[i] = gen_circle(r)
+        elif shape == 'ellipses': mesh_Shps[i] = gen_ellipse(r,rot,e)
+        Shps_Area[i] = np.sum(mesh_Shps[i])
+    return
+
+def place_grains(VF,R1,R2,nx,ny,nx0,ny0):
+    vfrc = 0.
+    xc = np.linspace(R1[0],R2[0],nx)
+    yc = np.linspace(R1[1],R2[1],ny)
+    while vfrc < VF:
+
+
+
+def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20):
     """
     This function generates the global mesh that all particles will be inserted into.
     Initially it reads in several parameters and renames them within the module. Then 
@@ -18,7 +137,6 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     Y        : The y-length of the mesh, in cells
     CPPR     : The chosen value of cells per particle radius
     pr       : The particle size range (a fraction). The range of particle sizes that will be produced
-    VF       : The volume fraction. AKA the ratio of particle to void we want to achieve
     GridSpc  : The physical length of one cell. [m]
     NS       : Length [cells] of one side of the 'mini mesh' used to hold the generated shapes/grains 
 
@@ -27,7 +145,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     NB. Recently I have updated 'N' to now be the number of different particles that can be generated
     and NOT N**2. 19-01-16
     """
-    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,vol_frac,mesh,xh,yh,Ns,N,Nps,part_area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh
+    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps,Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh
     GS        = GridSpc
     Ms        = mat_no                                                                                     # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
@@ -41,7 +159,6 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     else:
         cppr_max  = cppr_mid*(1.+PR)
         cppr_min  = cppr_mid*(1.-PR)
-    vol_frac  = VF                                                                                         # Target fraction by volume of parts:void
     mesh      = np.zeros((meshy,meshx))
     trmesh    = np.zeros((meshy,meshx))
     materials = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
@@ -53,7 +170,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,VF=.5,GridSpc=2.e-6,NS=None
     else:
         Ns = NS
     N         = NP                                                                                         # N is the number of different particles that can be generated  
-    part_area = np.zeros((N))
+    Shps_Area = np.zeros((N))
     mesh0     = np.zeros((Ns,Ns))                                                                          # Generate mesh that is square and slightly larger than the max 
                                                                                                            # particle size
                                                                                                            # This will be the base for any shapes that are generated
@@ -196,7 +313,7 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min
 
     A_shape = polygon_area(I_,J_)
     lengthscale  = np.sqrt((areascale*A_shape)/np.pi)                                                       # Shape area is scaled and equivalent radius found
-                                                                                                         # This is used as the lengthscale
+                                                                                                            # This is used as the lengthscale
     J_   *= (Ns/2.)*lengthscale
     I_   *= (Ns/2.)*lengthscale
     J     = J_*ct - I_*st
@@ -204,72 +321,35 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min
     
     radii     = np.sqrt(I**2+J**2)
     min_radii = np.amin(radii)
+    max_radii = int(np.amax(radii))
+    mesh_     = np.zeros((max_radii*2+2,max_radii*2+2))
     Failure   = False
     if min_radii < min_res: Failure = True
     n  = np.size(J)-1
     qx = 0.                                                                                 
     qy = 0.                                                                                 
-    x0 = float(Ns)/2.                                                                                    # Ns = 2*cppr_max + 2, so half well be cppr_max + 1
-    y0 = float(Ns)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
+    y0 = float(max_radii*2+2)/2.                                                                                    # Define x0, y0 to be the centre of the mesh
+    x0 = y0
     if Failure != True:
-        """
-        for j in range(Ns):                                                                     
-            for i in range(Ns):                                                                 
-                xc = 0.5*(i + (i+1)) - x0                                                       
-                yc = 0.5*(j + (j+1)) - y0                                                       
-                sx = xc - qx                                                                    
-                sy = yc - qy           
-                intersection = 0                                                                
-                for l in range(n):                                                              
-                    rx = I[l+1] - I[l]                                                          
-                    ry = J[l+1] - J[l]
-                    RxS = (rx*sy-ry*sx)                                                         
-                    if RxS!=0.:                                                                 
-                        t = ((qx-I[l])*sy - (qy-J[l])*sx)/RxS
-                        u = ((qx-I[l])*ry - (qy-J[l])*rx)/RxS
-                        if t<=1. and t>=0. and u<=1. and u>=0.: intersection = intersection + 1
-                if (intersection%2==0.):                                                        
-                    if mixed == False:                                                          
-                        mesh0[j,i] = 1.0
-                    elif mixed == True:
-                        xx = np.linspace(i,i+1,11)                        
-                        yy = np.linspace(j,j+1,11)                        
-                        for ii in range(10):
-                            for jj in range(10):                                    
-                                xxc = .5*(xx[ii]+xx[ii+1]) - x0                              
-                                yyc = .5*(yy[jj]+yy[jj+1]) - y0
-                                sx  = xxc - qx                                                                        
-                                sy  = yyc - qy           
-                                intersection = 0                                                                      
-                                for l in range(n):                                                                  
-                                    rx = I[l+1] - I[l]                                                                
-                                    ry = J[l+1] - J[l]
-                                    RxS = (rx*sy-ry*sx)                                                               
-                                    if RxS!=0.:                                                                       
-                                        t = ((qx-I[l])*sy - (qy-J[l])*sx)/RxS
-                                        u = ((qx-I[l])*ry - (qy-J[l])*rx)/RxS
-                                        if t<=1. and t>=0. and u<=1. and u>=0.:
-                                            intersection = intersection + 1
-                                if (intersection%2==0.):                                                        
-                                    mesh0[j,i] += 0.1**2.
-        """
         I += x0
         J += y0
         path = mpath.Path(np.column_stack((I,J)))
         for i in range(Ns):
             for j in range(Ns):
                 in_shape = path.contains_point([i+.5,j+.5])
-                if in_shape and mixed == False: mesh0[i,j] = 1.
+                if in_shape and mixed == False: mesh_[i,j] = 1.
                 elif in_shape and mixed == True:
                     for ii in np.arange(i,i+1,.1):
                         for jj in np.arange(j,j+1,.1):
                             in_shape2 = path.contains_point([ii+.05,jj+.05])
-                            if in_shape2: mesh0[i,j] += .01
+                            if in_shape2: mesh_[i,j] += .01
 
     #plt.figure()
     #plt.imshow(mesh0,cmap='binary',interpolation='nearest')
     #plt.plot(x0,y0,color='r',marker='o')
     #plt.show()
+    ind = (Ns - (max_radii*2 + 2))/2
+    mesh0[ind:-ind,ind:-ind] = mesh_
     return mesh0,Failure
 
 def gen_ellipse(r_,a_,e_):
@@ -1268,16 +1348,30 @@ def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False,tracers=Fals
 
 
 def populate_from_bmp(A):
+    """
+    Function that populates the materials meshes from an array of grayscale values
+    (0-255), typically derived from a BMP image, but others will work.
+    Different shades are treated as different materials, however, white is ignored
+    and treated as 'VOID'. This puts a cap of 255 on the maximum number of materials possible
+    in a simulation.
+    --------------------------------------------------------------------------
+    |args      |  Meaning                                                    | 
+    --------------------------------------------------------------------------
+    |A         |  2D array of grayscale integer                              |
+    |          |  values: (0 - 255)                                          |
+    --------------------------------------------------------------------------
+    """
     global materials,Ms,FRAC
     fname = 'meso_m.iSALE'
     #A = A[:,::-1]
     ny, nx = np.shape(A)
-    ms    = np.unique(A)
+    ms    = np.unique(A[A!=255])    #white is considered 'VOID' and should not be included
+    print ms, np.unique(A)
     Nms   = np.size(ms)
-    generate_mesh(nx,ny,np.amax(A),mat_no=Nms)
+    generate_mesh(nx,ny,mat_no=Nms)
     XI    = np.zeros((nx*ny))    
     YI    = np.zeros((nx*ny))
-    K = 0
+    K     = 0
     for i in range(nx):
         for j in range(ny):
             XI[K] = i
@@ -1291,7 +1385,7 @@ def populate_from_bmp(A):
                 M += 1
             K += 1
         
-    HEAD = '{},{}'.format(K,Ms)
+    HEAD = '{},{}'.format(np.size(XI),Ms)
     ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
     
     fig, ax = plt.subplots()
@@ -1347,7 +1441,7 @@ def fill_plate(y1,y2,mat,invert=False):
             mesh[j,i]            = 1. - present_mat
     return
 
-def fill_rectangle(L1,T1,L2,T2,mat,invert=False,tracers=False,ON=None):
+def fill_rectangle(L1,T1,L2,T2,mat,invert=False):
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
     It fills all cells between y1 and y2.
@@ -1361,10 +1455,9 @@ def fill_rectangle(L1,T1,L2,T2,mat,invert=False,tracers=False,ON=None):
             for j in range(meshy):
                 Tc = 0.5*(yh[j] + (yh[j+1]))                        
                 if Tc <= T2 and Tc >= T1:
-                    present_mat = np.sum(materials[:,j,i])                                                            # This ensures that plates override in the order they are placed.
+                    present_mat = np.sum(materials[:,j,i])                        # This ensures that plates override in the order they are placed
                     materials[mat-1,j,i] = 1. - present_mat
                     mesh[j,i]            = 1. - present_mat
-                    if tracers and materials[mat-1,j,i]>0.5: trmesh[j,i] = ON
     return
 
 def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
