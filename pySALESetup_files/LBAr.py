@@ -71,7 +71,6 @@ for i in range(500):
         Area = polygon_area(R[:,0],R[:,1])
         A_ratio = Area/(L*B)
     np.savetxt('grain_arearatio-{:2.3f}.txt'.format(A_ratio),R,delimiter=',')
-    print i,A_ratio
 
 fig = plt.figure()
 ax = fig.add_subplot(111,aspect='equal')
