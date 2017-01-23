@@ -2,7 +2,10 @@
 """ There is much to work on and more is being added all the time                     """
 """ - 19/01/16 - JGD                                                                  """
 
-
+from sys import platform as sys_pf
+if sys_pf == 'darwin':
+    import matplotlib
+    matplotlib.use("TkAgg")
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -36,8 +39,8 @@ def interactive_setup():
     resetax = plt.axes([0.8, 0.025, 0.1, 0.04])
     button1 = Button(resetax, 'Reset', color=axcolor, hovercolor='0.975')
     
-    generateax = plt.axes([0.13, 0.675, 0.1, 0.04])
-    button2 = Button(generateax, 'Generate New Mesh', color=axcolor, hovercolor='0.975')
+    generateax = plt.axes([0.13, 0.675, 0.1, 0.06])
+    button2 = Button(generateax, 'Generate \n New Mesh', color=axcolor, hovercolor='0.975')
     
     addboxax = plt.axes([0.13, 0.5, 0.1, 0.04])
     button3 = Button(addboxax, 'Draw Box', color=axcolor, hovercolor='0.975')
@@ -119,12 +122,40 @@ def generate_particle_list(shape,rotation=False):
         Shps_Area[i] = np.sum(mesh_Shps[i])
     return
 
-def place_grains(VF,R1,R2,nx,ny,nx0,ny0):
+def place_grains(VF,R1,R2):
     vfrc = 0.
-    xc = np.linspace(R1[0],R2[0],nx)
-    yc = np.linspace(R1[1],R2[1],ny)
-    while vfrc < VF:
-
+    mesh_tmp = np.zeros_like(materials[0])
+    box = mesh_tmp[(XX>R1[0])*(XX<R2[0])*(YY<R2[1])*(YY>R1[1])]
+    nbx,nby = np.shape(box)
+    try:
+        while vfrc < VF:
+            for mm in range(Ms):
+                mesh_tmp = np.maxmimum(mesh_tmp,materials[mm])
+            I = random.randint(0,N-1)
+            shape   = mesh_Shps[I]
+            indices = np.where(box==0.)                                                            # Generates an array of all indices in the main mesh of unassigned cells
+            indices = np.column_stack(indices)                                                     # column_stack mushes them together such that random choice 
+            y,x     = random.choice(indices) 
+            imin    = x-Ns/2
+            jmin    = y-Ns/2
+            imax    = x+Ns/2
+            jmax    = y+Ns/2
+            sub_box = box[imin:imax,jmin:jmax]
+            imin   += Ns/2 - x
+            imax   += Ns/2 - x
+            jmin   += Ns/2 - y
+            jmax   += Ns/2 - y
+            ind_shp = np.nonzero(shape[imin:imax,jmin:jmax])
+            T       = np.sum(sub_box[ind_shp])
+            if T<=2.:
+                place_shape(mesh_Shps[I],x,y,mm)
+                A = Shps_Area[I] - T
+                vfrc += A
+                update()
+            else:
+                pass
+    except KeyboardInterrupt:
+        pass
 
 
 def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20):
@@ -145,7 +176,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     NB. Recently I have updated 'N' to now be the number of different particles that can be generated
     and NOT N**2. 19-01-16
     """
-    global meshx, meshy, cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps,Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh
+    global meshx,meshy,cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps,Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh,XX,YY
     GS        = GridSpc
     Ms        = mat_no                                                                                     # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
@@ -165,6 +196,9 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     objects   = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
     xh        = np.arange(meshx+1)*GS                                                                      # arrays of physical positions of cell BOUNDARIES (not centres)
     yh        = np.arange(meshy+1)*GS
+    x_c       = (np.arange(meshx)+.5)*GS
+    y_c       = (np.arange(meshy)+.5)*GS
+    XX,YY     = np.meshgrid(x_c,y_c)
     if NS is None:
         Ns        = int(2*(cppr_max)+2)                                                                    # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
     else:
@@ -532,7 +566,7 @@ def check_coords_full(shape,x,y):
     cell_limit = (np.pi*float(cppr_max)**2.)/100.                                                        # Max number of overlapping cells should scale with area.
     CHECK  = 0                                                                                            # Initialise the CHECK as 0; 0 == all fine
     Py, Px     = np.shape(shape)
-    
+
     if x > meshx+cppr_max: CHECK = 1
     if x < 0-cppr_max:  CHECK = 1
     if y > meshy+cppr_max: CHECK = 1
@@ -883,6 +917,42 @@ def gen_coord_basic():
     """
     return x,y
 
+def gen_coord_in_box(shape,box):                                                                                    
+    """
+    Function generating a coordinate at which the 'shape' can go.
+    The function takes a 'shape' as an argument (e.g. a circle or ellipse)
+    then it selects a cell at random from the main mesh. However, it only 
+    includes cells that are not filled with material initilally in its
+    selection. Then the coordinates are checked using the check_coords_full
+    function. If this is succesful, the loop breaks and the coords are 
+    returned. If not, then the loop generates new coords and repeats until
+    either success is achieved or 5000 tries are exceeded. If the counter
+    exceeds 5000, the loop is ended and failure noted in the 'passes' variable.
+    
+    passes, x and y are all returned at the end of the function. Success has 
+    passes = 0, and failure has passes = 1.
+
+    This version takes values for a 'box' in which to generate the coordinates
+    
+    shape : array containing the shape to be checked. This does not have to be regular 
+    """
+    
+    global mesh                                                                                            # use global parameters (the mesh itself, mesh size)
+    check   = 1                                                                                            # Initialise the indicator variables
+    counter = 0                                                                                            # and the counter
+    passes  = 0                                                                                            # passes should start as 0 and check should start as 1.
+    indices = np.where(box==0.)                                                                        # Generates an array of all indices in the main mesh of unassigned cells
+    indices = np.column_stack(indices)                                                                    # column_stack mushes them together such that random choice 
+                                                                                                        # can choose pairs of coords
+    while check == 1:                                                                                    # Begin the loop. whilst check = 1, continue to loop 
+        y,x   = random.choice(indices)                                                                    # This randomly selects one pair of coordinates!
+        check = check_coords_full(shape,x,y)                                                            # Function to check if the polygon generated will fit 
+        counter += 1                                                                                    # Increment the counter
+        if counter>5000:                                                                                # If the counter exceeds 5000, this is the break clause
+            check = 0                                                                                    # Break the loop and report the failure in the return
+            passes= 1                                                                                    # if counter exceeds 1000 -> break loop and assign passes[k] = 1
+            break
+    return x,y,passes
 
 def gen_coord(shape):                                                                                    
     """
