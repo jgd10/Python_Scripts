@@ -145,7 +145,9 @@ zcr     *= GRIDSPC
 
 #pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
 #print 'save to meso_A-{:3.4f}.iSALE'.format(A)
-pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J,mixed=True)
+#pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J,mixed=True)
+pss.populate_materials(I_shape,XINT,YINT,MAT,J)                              # Now populate the materials meshes (NB these are different to the 'mesh' and are
+pss.save_general_mesh(mixed=True)
 
 
 timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
