@@ -33,8 +33,8 @@ def interactive_setup():
     smatno = Slider(axmatn, 'No. of Materials', 1, 9, valinit=5,valfmt='%1d')
     spr___ = Slider(axpr__, 'Grain Size Range', 0, 1, valinit=0.2)
     svfrac = Slider(axvfrc, 'Target \n Volume Fraction', 0., 1., valinit=0.5)
-    sXcell = Slider(axXcls, 'X cells', 10, 1000, valinit=500,valfmt='%03d')
-    sYcell = Slider(axYcls, 'Y cells', 10, 1000, valinit=500,valfmt='%03d')
+    sXcell = Slider(axXcls, 'X cells', 10, 1000, valinit=200,valfmt='%03d')
+    sYcell = Slider(axYcls, 'Y cells', 10, 1000, valinit=200,valfmt='%03d')
     
     resetax = plt.axes([0.8, 0.025, 0.1, 0.04])
     button1 = Button(resetax, 'Reset', color=axcolor, hovercolor='0.975')
@@ -44,6 +44,9 @@ def interactive_setup():
     
     addboxax = plt.axes([0.13, 0.5, 0.1, 0.04])
     button3 = Button(addboxax, 'Draw Box', color=axcolor, hovercolor='0.975')
+    
+    saveax = plt.axes([0.65, 0.025, 0.1, 0.04])
+    button4 = Button(saveax, 'Save', color='pink', hovercolor='0.975')
     
     
     def draw_box(event):
@@ -94,16 +97,21 @@ def interactive_setup():
         ax.set_xticklabels([0,meshx*GS/2.,meshx*GS])
         ax.set_yticks([0,meshy/2,meshy])
         ax.set_yticklabels([0,meshy*GS/2.,meshy*GS])
-        ax.set_yticks(np.arange(meshy),np.arange(meshy)*GS)
         ax.axis('equal')
 
-    rax = plt.axes([0.27, 0.92, 0.1, 0.05], axisbg=axcolor)
+    rax = plt.axes([0.27, 0.92, 0.1, 0.05], facecolor=axcolor)
     radio = RadioButtons(rax, ('circles', 'ellipses'), active=0)
     
     def generate_shapes(label):
         rot = tksd.askstring('Randomly rotate shapes?','[Y/N]',initialvalue='N')
         generate_particle_list(label,rot)
     radio.on_clicked(generate_shapes)
+
+    def save_mesh(event):
+        f = tksd.askstring('Save as:','filename',initialvalue='meso_m.iSALE')
+        save_general_mesh(fname=f)
+    button4.on_clicked(save_mesh)
+
 
 
     plt.show()
