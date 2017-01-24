@@ -59,6 +59,8 @@ def interactive_setup():
         update()
     button3.on_clicked(draw_box)
 
+#    def make_parts
+
 
 
     def reset(event):
@@ -184,7 +186,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     NB. Recently I have updated 'N' to now be the number of different particles that can be generated
     and NOT N**2. 19-01-16
     """
-    global meshx,meshy,cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps,Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh,XX,YY
+    global meshx,meshy,cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps,Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh,XX,YY,x_c,y_c
     GS        = GridSpc
     Ms        = mat_no                                                                                     # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
@@ -1527,15 +1529,11 @@ def fill_rectangle(L1,T1,L2,T2,mat,invert=False):
     global meshx,meshy,materials,mesh,xh,yh,trmesh
     assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
     assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
-    for i in range(meshx):
-        Lc = 0.5*(xh[i] + (xh[i+1]))                                                                    
-        if Lc <= L2 and Lc >= L1:
-            for j in range(meshy):
-                Tc = 0.5*(yh[j] + (yh[j+1]))                        
-                if Tc <= T2 and Tc >= T1:
-                    present_mat = np.sum(materials[:,j,i])                        # This ensures that plates override in the order they are placed
-                    materials[mat-1,j,i] = 1. - present_mat
-                    mesh[j,i]            = 1. - present_mat
+    temp_materials = np.copy(materials[mat-1])
+    temp_materials[(YY<=L2)*(YY>=L1)*(XX<=T2)*(XX>=T1)*(np.sum(materials,axis=0)<1.)] = 1. #- np.sum(materials,axis=0)  
+    temp_2 = np.sum(materials,axis=0)*temp_materials
+    temp_materials -= temp_2
+    materials[mat-1] = temp_materials
     return
 
 def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
