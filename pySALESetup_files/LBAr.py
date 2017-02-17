@@ -40,7 +40,7 @@ L = 1.
 B = 1./1.35
 A = 0.7*L*B
 q = 0.2*L/2.
-for i in range(500):
+for i in range(1):
     A_ratio = 0
     while A_ratio < .65 or A_ratio > .75:
     
@@ -72,7 +72,7 @@ for i in range(500):
         A_ratio = Area/(L*B)
     np.savetxt('grain_arearatio-{:2.3f}.txt'.format(A_ratio),R,delimiter=',')
 
-fig = plt.figure()
+fig = plt.figure(figsize=(1.35,1.))
 ax = fig.add_subplot(111,aspect='equal')
 codes = []
 codes.append(Path.MOVETO)
@@ -81,13 +81,15 @@ for i in range(7):
 
 codes.append(Path.CLOSEPOLY)
 path = Path(R, codes)
-patch = patches.PathPatch(path, facecolor='red', lw=0,alpha=.8)
+patch = patches.PathPatch(path, facecolor='purple', lw=0,alpha=.8)
+ax.set_xlim(-L/2.,L/2.)
+ax.set_ylim(-B/2.,B/2.)
+ax.axis('off')
 ax.add_patch(patch)
-ax.axvline(-L/2.)
-ax.axvline(L/2.)
-ax.axhline(-B/2.)
-ax.axhline(B/2.)
-ax.set_xlim(-.8,.8)
-ax.set_ylim(-.8,.8)
-plt.savefig('./grain_test.png',dpi=300)
+#ax.axvline(-L/2.)
+#ax.axvline(L/2.)
+#ax.axhline(-B/2.)
+#ax.axhline(B/2.)
+ax.set_facecolor('None')
+plt.savefig('./grain_test.png',dpi=300,bbox_inches='tight',transparent=True)
 
