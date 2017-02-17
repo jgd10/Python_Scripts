@@ -186,7 +186,10 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     NB. Recently I have updated 'N' to now be the number of different particles that can be generated
     and NOT N**2. 19-01-16
     """
-    global meshx,meshy,cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps,Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS,trmesh,XX,YY,x_c,y_c
+    global meshx,meshy,cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps
+    global Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS
+    global trmesh,XX,YY,x_c,y_c,VX_,VY_,part_no
+
     GS        = GridSpc
     Ms        = mat_no                                                                                     # M is the number of materials within the mesh
     mats      = np.arange(Ms)+1.
@@ -202,8 +205,11 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
         cppr_min  = cppr_mid*(1.-PR)
     mesh      = np.zeros((meshy,meshx))
     trmesh    = np.zeros((meshy,meshx))
+    VX_       = np.zeros((meshy,meshx))
+    VY_       = np.zeros((meshy,meshx))
     materials = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
-    objects   = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
+    objects   = np.zeros((meshy,meshx))                                                                 # The materials array contains a mesh for each material number
+    part_no   = np.zeros((meshy,meshx))                                                                 # The materials array contains a mesh for each material number
     xh        = np.arange(meshx+1)*GS                                                                      # arrays of physical positions of cell BOUNDARIES (not centres)
     yh        = np.arange(meshy+1)*GS
     x_c       = (np.arange(meshx)+.5)*GS
@@ -271,6 +277,26 @@ def copypasteUC(UC,UCX,UCY,RAD,MATS):
     #print xcoords
     #coords = coords[indices]
     return coords[:,0],coords[:,1],coords[:,2],coords[:,3]
+
+def convert_to_impactor(R1,R2,mm):
+    """
+    In iSALE velocities are determined by the host object, and until velocity
+    assignment is coded into pySALESetup this method will be the main way of 
+    making the target and impactor out of the same meso_m.iSALE file.
+
+    A material can not have more than one host object; therefore all material numbers
+    in the impactor must be different to those in the target. This function
+    takes the section to be the impactor and alters all material numbers within it
+    such that they are distinct from the target.
+    """
+    assert R1[0]<=R2[0] and R1[1]<=R2[1], 'ERROR: Second coordinates must be greater than the first'
+
+    materials[:][(XX>=R1[0])*(XX<=R2[0])*(YY>=R1[1])*(YY<=R2[1])] = 0.
+#    print np.shape(materials[:mm]),np.shape(materials[mm:]),np.shape(materials)
+#    impactor = np.roll(impactor,shift=1,axis=0)
+#    print np.amax(materials[:mm]),np.amax(materials[mm:])
+
+    return
 
 def gen_circle(r_):
     """
@@ -356,8 +382,12 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min
         I_ = np.append(I_,I_[0])
 
     A_shape = polygon_area(I_,J_)
-    lengthscale  = np.sqrt((areascale*A_shape)/np.pi)                                                       # Shape area is scaled and equivalent radius found
+    lengthscale  = np.sqrt(areascale)                                                       # Shape area is scaled and equivalent radius found
+    """
+    areascale is ratio of areas, thus lengthscale is the square root of this
+    """
                                                                                                             # This is used as the lengthscale
+    #print areascale,lengthscale
     J_   *= (Ns/2.)*lengthscale
     I_   *= (Ns/2.)*lengthscale
     J     = J_*ct - I_*st
@@ -366,7 +396,11 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min
     radii     = np.sqrt(I**2+J**2)
     min_radii = np.amin(radii)
     max_radii = int(np.amax(radii))
-    mesh_     = np.zeros((max_radii*2+2,max_radii*2+2))
+    min_size  = min(max_radii+1,Ns/2.)               
+    min_size *= 2
+    # Possible to have a max radius larger than half the box width
+    # But not to have a sub-mesh that big!
+    mesh_     = np.zeros((min_size,min_size))
     Failure   = False
     if min_radii < min_res: Failure = True
     n  = np.size(J)-1
@@ -388,12 +422,12 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min
                             in_shape2 = path.contains_point([ii+.05,jj+.05])
                             if in_shape2: mesh_[i,j] += .01
 
-    #plt.figure()
-    #plt.imshow(mesh0,cmap='binary',interpolation='nearest')
-    #plt.plot(x0,y0,color='r',marker='o')
-    #plt.show()
-    ind = (Ns - (max_radii*2 + 2))/2
-    mesh0[ind:-ind,ind:-ind] = mesh_
+    ind = (Ns - min_size)/2
+    #print ind,Ns,min_size
+    if ind != 0.:
+        mesh0[ind:-ind,ind:-ind] = mesh_
+    else:
+        mesh0 = mesh_
     return mesh0,Failure
 
 def gen_ellipse(r_,a_,e_):
@@ -799,7 +833,7 @@ def insert_shape_into_mesh(shape,x0,y0):
     area = np.sum(temp_shape)                                                                            # Area is sum of all these points
     return area
 
-def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,tracers=False,ONm=0):
+def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,info=False,shapeno=0):
     """
     This function inserts the shape (passed as the array 'shape') into the
     correct materials mesh at coordinate x0, y0.
@@ -812,30 +846,30 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,tracers=Fa
     
     nothing is returned.
     """
-    global mesh, meshx, meshy, cppr_max, materials,Ns,trmesh
-    if MATS == None: MATS = materials                                                                   # Now the materials mesh is only the default. Another mesh can be used!
-    if LX   == None: LX   = meshx                                                                       # The code should still work as before.
+    global mesh, meshx, meshy, cppr_max, materials,Ns,part_no
+    if MATS == None: MATS = materials                                                                 # Now the materials mesh is only the default. Another mesh can be used!
+    if LX   == None: LX   = meshx                                                                     # The code should still work as before.
     if LY   == None: LY   = meshy
-    Py, Px = np.shape(shape)                                                                            # Px and Py are the dimensions of the 'shape' array
+    Py, Px = np.shape(shape)                                                                          # Px and Py are the dimensions of the 'shape' array
     i_edge    = x0 - Ns/2
     j_edge    = y0 - Ns/2
     i_finl    = x0 + Ns/2
     j_finl    = y0 + Ns/2
-    #i_edge = x0 - cppr_max - 1                                                                            # Location of the edge of the polygon's mesh, within the main mesh.
-    #j_edge = y0 - cppr_max - 1                                                                            # This is calculated explicitly in case the mesh has a non-constant size
-    #i_finl = x0 + cppr_max + 1                                                                            # The indices refer to the closest edge to the origin,
-                                                                                                        # an extra cell is added either side
-    #j_finl = y0 + cppr_max + 1                                                                            # to ensure the shape is completely encompassed within the box
+    #i_edge = x0 - cppr_max - 1                                                                      # Location of the edge of the polygon's mesh, within the main mesh.
+    #j_edge = y0 - cppr_max - 1                                                                      # This is calculated explicitly in case the mesh has a non-constant size
+    #i_finl = x0 + cppr_max + 1                                                                      # The indices refer to the closest edge to the origin,
+                                                                                                     # an extra cell is added either side
+    #j_finl = y0 + cppr_max + 1                                                                      # to ensure the shape is completely encompassed within the box
     mat = int(mat) 
     """ 'i' refers to the main mesh indices whereas 'I' refers to 'shape' indices """
-    if i_edge < 0:                                                                                        # Condition if the coords have the particle being generated 
-                                                                                                        # over the mesh boundary
-        I_initial = abs(i_edge)                                                                            # a negative starting index is reassigned to zero
-        i_edge    = 0                                                                                    # The polygon's mesh will not completely be in the main mesh 
-    else:                                                                                                # So I_initial defines the cut-off point
-        I_initial = 0                                                                                    # If the polygon's mesh does not extend beyond the main mesh, 
-                                                                                                        # then I_initial is just 0
-    if j_edge < 0:                                                                                        # Repeat for the j-coordinate
+    if i_edge < 0:                                                                                   # Condition if the coords have the particle being generated 
+                                                                                                     # over the mesh boundary
+        I_initial = abs(i_edge)                                                                      # a negative starting index is reassigned to zero
+        i_edge    = 0                                                                                # The polygon's mesh will not completely be in the main mesh 
+    else:                                                                                            # So I_initial defines the cut-off point
+        I_initial = 0                                                                                # If the polygon's mesh does not extend beyond the main mesh, 
+                                                                                                     # then I_initial is just 0
+    if j_edge < 0:                                                                                   # Repeat for the j-coordinate
         J_initial = abs(j_edge) 
         j_edge = 0
     else:
@@ -861,13 +895,13 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,tracers=Fa
                     if MATS == None:
                         if np.sum(materials[:,o+j_edge,p+i_edge]) == 0.:
                             materials[mat-1,o+j_edge,p+i_edge] = 1.
-                            if tracers: trmesh[o+j_edge,p+i_edge] = ONm
+                            if info: part_no[o+j_edge,p+i_edge] = shape_no
                         else:
                             pass
                     else:
                         if np.sum(MATS[:,o+j_edge,p+i_edge]) == 0.:
                             MATS[mat-1,o+j_edge,p+i_edge] = 1.
-                            if tracers: trmesh[o+j_edge,p+i_edge] = ONm
+                            if info: part_no[o+j_edge,p+i_edge] = shapeno
                         else:
                             pass
     elif Mixed == True:
@@ -882,7 +916,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,tracers=Fa
                         else:
                             new_mat = temp_shape[o,p]
                         materials[mat-1,o+j_edge,p+i_edge] += new_mat
-                        if tracers and temp_shape[o,p]>0.5: trmesh[o+j_edge,p+i_edge] = ONm
+                        if info and temp_shape[o,p]>0.5: part_no[o+j_edge,p+i_edge] = shapeno
                     else:
                         tot_present = np.sum(MATS[:,o+j_edge,p+i_edge])
                         space_left = 1. - tot_present
@@ -891,7 +925,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,tracers=Fa
                         else:
                             new_mat = temp_shape[o,p]
                         MATS[mat-1,o+j_edge,p+i_edge] += new_mat
-                        if tracers and temp_shape[o,p]>0.5: trmesh[o+j_edge,p+i_edge] = ONm
+                        if info and temp_shape[o,p]>0.5: part_no[o+j_edge,p+i_edge] = shapeno
 
     #objects_temp                                 = np.ceil(np.maximum(shape[I_initial:I_final,J_initial:J_final],objects[mat-1,i_edge:i_finl,j_edge:j_finl]))
     #objects_temp[objects_temp>0.]                = obj
@@ -1354,7 +1388,7 @@ def discrete_contacts_number(SHAPENO,X,Y,n,PN):
 
     return A, contact_matrix
 
-def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True,TRACERS=False,ON=None): 
+def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True,info=False,ON=None): 
     """
     Function populates the materials meshes. Must be used after material assignment to particles before
     any block material assignment, e.g. a matrix.
@@ -1371,14 +1405,14 @@ def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True,TRACERS=False,ON=None):
     global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,trmesh
     for k in range(n):
         mmm = MATS[k]
-        if TRACERS:
-            place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed,tracers=TRACERS,ONm=ON[k])
+        if info:
+            place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed,info=info,shapeno=k+1)
         else:
             place_shape(mesh_Shps[SHAPENO[k]],X[k],Y[k],mmm,Mixed=mixed)
     return
 
 
-def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False,tracers=False):
+def save_general_mesh(fname='meso_m.iSALE',mixed=False,noVel=False,info=False):
     """
     A function that saves the current mesh as a text file that can be read, verbatim into iSALE.
     This compiles the integer indices of each cell, as well as the material in them and the fraction
@@ -1389,40 +1423,46 @@ def save_general_mesh(fname='meso_m.iSALE',mixed=False,invert=False,tracers=Fals
     It does not need to remake the mesh as there is no particular matter present.
     
     fname   : The filename to be used for the text file being used
+    mixed   : Are mixed cells used?
+    noVel   : Does not include velocities in meso_m.iSALE file
     
     returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
     """
-    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,Ms,trmesh
+    global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,Ms,trmesh,VX_,VY_
+    if info:
+        OI    = np.zeros((meshx*meshy))
+        PI    = np.zeros((meshx*meshy))
+
     XI    = np.zeros((meshx*meshy))    
     YI    = np.zeros((meshx*meshy))
-    OI    = np.zeros((meshx*meshy))
+    UX    = np.zeros((meshx*meshy))
+    UY    = np.zeros((meshx*meshy))
     K     = 0
-    materials          = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
-    if tracers: trmesh =    trmesh[::-1,:]
+    #materials          = materials[:,::-1,:]    #Reverse array vertically, as it is read into iSALE upside down otherwise
+    #VX_                = VX_[::-1,:]
+    #VY_                = VY_[::-1,:]
     for i in range(meshx):
         for j in range(meshy):
-            XI[K] = i
-            YI[K] = j
-            if tracers:
-                OI[K] = trmesh[j,i]
-            else:
-                OI[K] = 0
-            if invert:
-                if np.any(materials[:,j,i]):
-                    FRAC[:,K]*= 0.
-                else:
-                    FRAC[:,K]*= 0.
-                    FRAC[0,K] = 1.
-            else:
-                for mm in range(Ms):
-                    FRAC[mm,K] = materials[mm,j,i]
-                    OBJID[mm,K]= objects[mm,j,i]                                                        # each particle number
-
+            XI[K] = j
+            YI[K] = i
+            UX[K] = VX_[j,i]
+            UY[K] = VY_[j,i]
+            if info:
+                PI[K] = part_no[j,i]
+            for mm in range(Ms):
+                FRAC[mm,K] = materials[mm,j,i]
+                #OBJID[mm,K]= objects[mm,j,i]                                                        # each particle number
             K += 1
     FRAC = check_FRACs(FRAC,mixed)
     HEAD = '{},{}'.format(K,Ms)
-    ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
-    #ALL  = np.column_stack((XI,YI,OI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    if noVel:
+        ALL  = np.column_stack((XI,YI,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
+    elif info:
+        ALL  = np.column_stack((XI,YI,UX,UY,FRAC.transpose(),PI))                                                # ,OBJID.transpose())) Only include if particle number needed
+    elif info and noVel:
+        ALL  = np.column_stack((XI,YI,FRAC.transpose(),PI))                                                # ,OBJID.transpose())) Only include if particle number needed
+    else:
+        ALL  = np.column_stack((XI,YI,UX,UY,FRAC.transpose()))                                                # ,OBJID.transpose())) Only include if particle number needed
     np.savetxt(fname,ALL,header=HEAD,fmt='%5.3f',comments='')
     return
 
@@ -1434,6 +1474,9 @@ def populate_from_bmp(A):
     Different shades are treated as different materials, however, white is ignored
     and treated as 'VOID'. This puts a cap of 255 on the maximum number of materials possible
     in a simulation.
+    ***********************************************************
+    **NB This function does not yet generate a velocity field**
+    ***********************************************************
     --------------------------------------------------------------------------
     |args      |  Meaning                                                    | 
     --------------------------------------------------------------------------
@@ -1446,7 +1489,6 @@ def populate_from_bmp(A):
     #A = A[:,::-1]
     ny, nx = np.shape(A)
     ms    = np.unique(A[A!=255])    #white is considered 'VOID' and should not be included
-    print ms, np.unique(A)
     Nms   = np.size(ms)
     generate_mesh(nx,ny,mat_no=Nms)
     XI    = np.zeros((nx*ny))    
@@ -1516,24 +1558,91 @@ def fill_plate(y1,y2,mat,invert=False):
     assert y2>y1, 'ERROR: 2nd y value is less than the first, the function accepts them in ascending order' 
     for j in range(meshx):
         if j <= y2 and j >= y1:
-            present_mat = np.sum(materials[:,j,i])                                                            # This ensures that plates override in the order they are placed.
+            present_mat = np.sum(materials[:,j,i])                                        # This ensures that plates override in the order they are placed.
             materials[mat-1,j,i] = 1. - present_mat
             mesh[j,i]            = 1. - present_mat
     return
 
-def fill_rectangle(L1,T1,L2,T2,mat,invert=False):
+def rectangle_material_vel(L1,L2,T1,T2,mat,vel,dim=1):
+    """
+    A combination of rectangle and material vel. Gives all cells of material mat, in box constrained by
+    (L1,T1) and (L2,T2), a velocity vel in direction dim.
+    """
+    global VX_,VY_,materials
+    assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
+    assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
+    assert dim == 0 or dim ==1, 'ERROR: Dimension must be 0 or 1, x or y'
+    if dim == 0:
+        VX_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(materials[mat-1]>0.)] = vel #- np.sum(materials,axis=0)  
+    elif dim == 1:
+        VY_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(materials[mat-1]>0.)] = vel #- np.sum(materials,axis=0)  
+    return
+
+def material_vel(mat,vel,dim=1):
+    """
+    This function gives all the cells containing material mat, a velocity vel, in direction dim
+    """
+    global VX_,VY_,materials
+    assert dim == 0 or dim ==1, 'ERROR: Dimension must be 0 or 1, x or y'
+    if dim == 0:
+        VX_[materials[mat-1]>0.] = vel #- np.sum(materials,axis=0)  
+    elif dim == 1:
+        VY_[materials[mat-1]>0.] = vel #- np.sum(materials,axis=0)  
+    return
+
+def rectangle_vel(L1,T1,L2,T2,vel,dim=1):
+    """
+    This function gives all the cells within the box (defined by (L1,T1) and (L2,T2) a velocity vel in direction dim
+    provided they contain some material! Void is given no velocity.
+    """
+    global VX_,VY_,materials
+    assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
+    assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
+    assert dim == 0 or dim ==1, 'ERROR: Dimension must be 0 or 1, x or y'
+    if dim == 0:
+        VX_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
+    elif dim == 1:
+        VY_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
+    return
+
+def fill_rectangle(L1,T1,L2,T2,mat):
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
     It fills all cells between y1 and y2.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~if mat == -1. this fills the cells with VOID and overwrites everything.~
+    ~and additionally sets all velocities in those cells to zero            ~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+    global meshx,meshy,materials,mesh,trmesh,VX_,VY_,Ms,XX,YY
+    assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
+    assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
+    if mat == -1.:
+        for mm in range(Ms):
+            materials[mm][(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
+        VX_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
+        VY_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
+        part_no[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
+    else:
+        temp_materials = np.copy(materials[mat-1])
+        temp_materials[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)<1.)] = 1. #- np.sum(materials,axis=0)  
+        temp_2 = np.sum(materials,axis=0)*temp_materials
+        temp_materials -= temp_2
+        materials[mat-1] += temp_materials
+    return
+def overwrite_rectangle(L1,T1,L2,T2,mat):
+    """
+    This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
+    It fills all cells between y1 and y2. This version overwrites any material already placed, unlike fill-rectangle, which does not
     """
     global meshx,meshy,materials,mesh,xh,yh,trmesh
     assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
     assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
     temp_materials = np.copy(materials[mat-1])
-    temp_materials[(YY<=L2)*(YY>=L1)*(XX<=T2)*(XX>=T1)*(np.sum(materials,axis=0)<1.)] = 1. #- np.sum(materials,axis=0)  
-    temp_2 = np.sum(materials,axis=0)*temp_materials
-    temp_materials -= temp_2
-    materials[mat-1] = temp_materials
+    for mm in range(Ms):
+        materials[mm][(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] = 0. #- np.sum(materials,axis=0)  
+    materials[mat-1][(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] = 1. #- np.sum(materials,axis=0)  
+    part_no[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] = 0.
     return
 
 def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
@@ -1785,4 +1894,86 @@ def smooth_mesh(MMM):
     #plt.show()
 
     return MMM
+def shape_info(fname):
+    """
+    This function calculates the Elongation, area ratio and geologic 'roundness'
+    of a given shape, from its vertices.
+
+    returns:
+
+    A_ratio    = (Area of shape)/(Area of largest box containing it)
+    Elongation = ratio of long side to short side of largest box containing shape
+    Roundness  = (average radius of curvature)/(smallest inscribed circle radius)
+    """
+    VX    = np.genfromtxt(fname,comments='#',usecols=0,delimiter=',')
+    VY    = np.genfromtxt(fname,comments='#',usecols=1,delimiter=',')
+    V     = np.genfromtxt(fname,comments='#',usecols=(0,1),delimiter=',')
+    
+    
+    nv    = np.size(VX)
+
+    vxmax = np.amax(VX)
+    vxmin = np.amin(VX)
+    xspan = abs(vxmax-vxmin)
+    
+    vymax = np.amax(VY)
+    vymin = np.amin(VY)
+    yspan = abs(vymax-vymin)
+    L     = max(xspan,yspan)
+    B     = min(xspan,yspan)
+
+    VX /= L
+    VY /= L
+    V  /= L
+    L  /= L
+    B  /= L
+
+    elongation = L/B
+    A_ratio    = polygon_area(VX,VY)/(L*B) 
+    a = 0.
+    for i in range(nv-1):
+        I1 = i-1
+        I2 = i
+        I3 = i+1
+        
+        if i == 0:    I1 = -1
+
+        # Vectors to the midpoint of each face connecting vertex i
+        M1 = np.array([(VX[I1]+VX[I2])/2.,(VY[I1]+VY[I2])/2.])
+        M2 = np.array([(VX[I2]+VX[I3])/2.,(VY[I2]+VY[I3])/2.])
+        
+        # Vector magnitudes
+        m1 = np.linalg.norm(M1)
+        m2 = np.linalg.norm(M2)
+        
+        # Normalise the two midpoint vectors
+        U1 = M1/m1
+        U2 = M2/m2
+        
+        # Their average magnitude
+        m  = (m1+m2)/2.
+        # New vectors for use in calculation
+        N1 = V[i] + U1*m
+        N2 = V[i] + U2*m
+
+        # Length of the chord between them
+        S  = np.linalg.norm(N1-N2)
+        
+        # Calculate angle between N1 & N2
+        cost = np.sum(N1*N2)/(np.linalg.norm(N1)*np.linalg.norm(N2))
+
+        # Do not allow angles > pi
+        thet = np.arccos(cost)
+        if thet > np.pi: thet -= np.pi
+        alph = np.pi-thet
+        
+        # radius = rad of circle that is tangential at N1 & N2
+        a += S*.5/(np.sin(alph/2.))
+    ac = a/float(nv-1)
+    q  = B/3.
+    roundness = ac/q
+
+    return elongation,A_ratio,roundness
+
+
 
