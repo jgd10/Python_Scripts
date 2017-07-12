@@ -7,22 +7,23 @@ import matplotlib.pyplot as plt
 import time
 
 def func(x):
-    off_set = 2.5e-3
-    theta = 2.*np.pi*x/2.e-3
-    y = .3e-3*np.cos(theta) + off_set
+    off_set = 5.32e-3
+    theta = 2.*np.pi*x/1.e-3
+    y = .24e-3*np.cos(theta) + off_set
     return y
     
 
-L_cells    = 1000 				# T - Transverse, L - Longitudinal
-T_cells    = 300 
+#L_cells    = 1000 				# T - Transverse, L - Longitudinal
+#T_cells    = 300 
 #L_cells    = 100 				# T - Transverse, L - Longitudinal
 #T_cells    = 407 
 r = 8
-T_length   = 3.e-3
-L_length   = 10.e-3
-GRIDSPC    = T_length/T_cells
-print GRIDSPC
-pss.generate_mesh(L_cells,T_cells,CPPR=r,mat_no=5,GridSpc=GRIDSPC)
+L_length   = 4.e-3
+T_length   = 10.32e-3
+GRIDSPC    = 11.85e-6
+T_cells    = int(T_length/GRIDSPC)
+L_cells    = int(L_length/GRIDSPC)
+pss.generate_mesh(L_cells,T_cells,CPPR=r,mat_no=2,GridSpc=GRIDSPC)
 mats = pss.mats
 mats = mats.astype(int)
 """
@@ -57,43 +58,30 @@ Al4_L1 = 1.3e-3
 Al4_L2 = 2.5e-3
 pss.fill_rectangle(Al4_L1,Al4_T1,Al4_L2,Al4_T2,mats[1])
 """
-Cu2_T1 = 0.e-3
-Cu2_T2 = 5.e-3
 Cu2_L1 = 0.e-3
-Cu2_L2 = 2.5e-3
-pss.fill_sinusoid(Cu2_L1,Cu2_T1,func,Cu2_T2,mats[0],mixed=True)
+Cu2_L2 = 4.e-3
+Cu2_T1 = 0.e-3
+Cu2_T2 = 5.32e-3
+pss.fill_sinusoid(Cu2_L1,Cu2_T1,func,Cu2_L2,mats[0],mixed=False)
 
-Sip_T1 = 0.e-3
-Sip_T2 = 5.e-3
 Sip_L1 = 0.e-3
-Sip_L2 = 10.e-3
-pss.fill_rectangle(Sip_L1,Sip_T1,Sip_L2,Sip_T2,mats[2])
+Sip_L2 = 4.e-3
+Sip_T1 = 0.e-3
+Sip_T2 = 10.32e-3
+pss.fill_rectangle(Sip_L1,Sip_T1,Sip_L2,Sip_T2,mats[1])
 
 
-"""
-PMMA_T1 = 0.e-3
-PMMA_T2 = 10.e-3
-PMMA_L1 = 8.6e-3
-PMMA_L2 = 10.e-3
-pss.fill_rectangle(PMMA_L1,PMMA_T1,PMMA_L2,PMMA_T2,mats[3])
-"""
-#pss.mesh_Shps[0,:,:],part_area = pss.gen_circle(r)
 
-i = np.where(abs(pss.yh-12.7e-3)<pss.GS/2.)
-j = np.where(abs(pss.xh-4.51e-3)<pss.GS/2.)
-I, J, M = i[0],j[0],mats[4]
-#pss.place_shape(pss.mesh_Shps[0,:,:],J,I,M)
+pss.materials = pss.materials[:,::-1,]
+#pss.materials = np.transpose(pss.materials)
 plt.figure()
 #plt.imshow(pss.mesh,interpolation='nearest',cmap='binary')
 view_mesh = np.zeros_like((pss.materials[0,:,:]))
 for item in mats:
     view_mesh += pss.materials[item-1,:,:]*item
 plt.imshow(view_mesh,interpolation='nearest',cmap = 'viridis')
-#plt.imshow(pss.materials[0,:,:],interpolation='nearest',cmap='copper_r')
-#plt.imshow(pss.materials[1,:,:],interpolation='nearest',cmap='BuPu')
-#plt.imshow(pss.materials[2,:,:],interpolation='nearest',cmap='viridis')
-#plt.imshow(pss.materials[3,:,:],interpolation='nearest',cmap='binary')
-#plt.imshow(pss.materials[4,:,:],interpolation='nearest',cmap='Reds_r')
 plt.show()
 
-pss.save_general_mesh(mixed=True)
+pss.save_general_mesh(fname='meso_m_Alwave_{}x{}.iSALE'.format(T_cells,L_cells),mixed=False,noVel=True)
+
+
