@@ -846,10 +846,12 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,info=False
     
     nothing is returned.
     """
-    global mesh, meshx, meshy, cppr_max, materials,Ns,part_no
+    global mesh, meshx, meshy, cppr_max, materials,Ns,part_no,GS
     if MATS == None: MATS = materials                                                                 # Now the materials mesh is only the default. Another mesh can be used!
     if LX   == None: LX   = meshx                                                                     # The code should still work as before.
     if LY   == None: LY   = meshy
+    if type(x0) == float: x0 = int(x0/GS)
+    if type(y0) == float: y0 = int(y0/GS)
     Py, Px = np.shape(shape)                                                                          # Px and Py are the dimensions of the 'shape' array
     i_edge    = x0 - Ns/2
     j_edge    = y0 - Ns/2
@@ -1645,20 +1647,20 @@ def overwrite_rectangle(L1,T1,L2,T2,mat):
     part_no[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] = 0.
     return
 
-def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
+def fill_sinusoid(L1,T1,func,L2,mat,mixed=False,tracers=False,ON=None):
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
     It fills all cells between y1 and y2.
     """
     global meshx,meshy,materials,mesh,xh,yh,mats,trmesh
     #assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
-    assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
+    assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
     for j in range(meshy):
         for i in range(meshx):
             Tc = 0.5*(yh[j] + (yh[j+1]))                        
             Lc = 0.5*(xh[i] + (xh[i+1]))                                                                    
             dx = abs(xh[i+1] - xh[i])
-            if Lc <= func(Tc) and Lc >= L1 and Tc >= T1 and Tc <= T2:
+            if Tc <= func(Lc) and Tc >= T1 and Lc >= L1 and Lc <= L2:
                 #materials[:,i,j]     = 0.                                                            # This ensures that plates override in the order they are placed.
                 if mixed:
                     ll = np.linspace(xh[i],xh[i+1],11)                                                        # Split into 10x10 grid and fill, depending on these values.
@@ -1668,7 +1670,7 @@ def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
                         for J in range(10):
                             llc = (ll[I] + ll[I+1])/2.
                             ttc = (tt[J] + tt[J+1])/2.
-                            if llc <= func(ttc) and llc >= L1 and ttc >= T1 and ttc <= T2:
+                            if ttc <= func(llc) and llc >= L1 and ttc >= T1 and llc <= L2:
                                 counter += 1
                     present_mat = np.sum(materials[:,j,i])
                     new_mat     = counter*.1**2.
@@ -1685,7 +1687,7 @@ def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
                         mesh[j,i]            = 1.
                     else:
                         pass
-            elif mixed and abs(Lc-func(Tc)) <= 2.*dx and Lc >= L1 and Tc >= T1 and Tc <= T2:
+            elif mixed and abs(Tc-func(Lc)) <= 2.*dx and Lc >= L1 and Tc >= T1 and Lc <= L2:
                 ll = np.linspace(xh[i],xh[i+1],11)                                                        # Split into 10x10 grid and fill, depending on these values.
                 tt = np.linspace(yh[j],yh[j+1],11)                        
                 counter = 0
@@ -1693,14 +1695,14 @@ def fill_sinusoid(L1,T1,func,T2,mat,mixed=False,tracers=False,ON=None):
                     for J in range(10):
                         llc = (ll[I] + ll[I+1])/2.
                         ttc = (tt[J] + tt[J+1])/2.
-                        if llc <= func(ttc) and llc >= L1 and ttc >= T1 and ttc <= T2:
+                        if ttc <= func(llc) and llc >= L1 and ttc >= T1 and llc <= L2:
                             counter += 1
                 present_mat = np.sum(materials[:,j,i])
                 new_mat     = counter*.1**2.
                 space_left = 1.-present_mat
                 new_mat = min(new_mat,space_left)
                 materials[mat-1,j,i] += new_mat
-                if tracers and new_mat>0.5: trmesh[j,i] = ON
+                #if tracers and new_mat>0.5: trmesh[j,i] = ON
     return
 
 def fill_above_line(r1,r2,mat,invert=False,mixed=False):
