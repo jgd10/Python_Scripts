@@ -188,32 +188,62 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     """
     global meshx,meshy,cppr_mid,PR,cppr_min,cppr_max,mesh,xh,yh,Ns,N,Nps
     global Shps_Area,mesh0,mesh_Shps,materials,Ms,mats,objects,FRAC,OBJID,GS
-    global trmesh,XX,YY,x_c,y_c,VX_,VY_,part_no
+    global trmesh,XX,YY,x_c,y_c,VX_,VY_,part_no,alpha
 
+    # Length of the side of one cell in m
     GS        = GridSpc
-    Ms        = mat_no                                                                                     # M is the number of materials within the mesh
+    # Number of materials in the simulation
+    Ms        = mat_no                     
+    # List of the material numbers (in integers!)
     mats      = np.arange(Ms,dtype=int)+1
+    # No. cells in the transverse direction
     meshx     = X
+    # No. cells in the longitudinal direction
     meshy     = Y
+    # Average number of cells per particle radius (when linear distribution)
     cppr_mid  = CPPR
+    # Particle size range
     PR        = pr
+    
+    # if cppr_max and min predefined
     if np.size(PR)>1:
-        cppr_min  = PR[0]*cppr_mid                                                                         # Min No. cells/particle radius 
-        cppr_max  = PR[1]*cppr_mid                                                                         # Max No. cells/particle radius
+        # Minimum particle size
+        cppr_min  = PR[0]*cppr_mid                                                                          
+        # Maximum particle size
+        cppr_max  = PR[1]*cppr_mid  
+    # else if just PR defined
     else:
+        # Maximum particle size
         cppr_max  = cppr_mid*(1.+PR)
+        # Minimum particle size
         cppr_min  = cppr_mid*(1.-PR)
+
+    # Volume fraction field 
     mesh      = np.zeros((meshy,meshx))
+    # Tracer mesh
     trmesh    = np.zeros((meshy,meshx))
+    # Velocity field (Transverse)
     VX_       = np.zeros((meshy,meshx))
+    # Velocity field (Longitudinal)
     VY_       = np.zeros((meshy,meshx))
-    materials = np.zeros((Ms,meshy,meshx))                                                                 # The materials array contains a mesh for each material number
-    objects   = np.zeros((meshy,meshx))                                                                 # The materials array contains a mesh for each material number
-    part_no   = np.zeros((meshy,meshx))                                                                 # The materials array contains a mesh for each material number
-    xh        = np.arange(meshx+1)*GS                                                                      # arrays of physical positions of cell BOUNDARIES (not centres)
+    # Material fields
+    materials = np.zeros((Ms,meshy,meshx))                                                     
+    # Object field
+    objects   = np.zeros((meshy,meshx))                                                        
+    # Particle number field
+    part_no   = np.zeros((meshy,meshx))                                                        
+    # Disension field (default & min value: 1)
+    alpha   = np.ones((meshy,meshx))                                                        
+    # Transverse positions of the nodes
+    xh        = np.arange(meshx+1)*GS                                                          
+    # Longitudinal positions of the nodes
     yh        = np.arange(meshy+1)*GS
+
+    # Transverse positions of the cells (centres)
     x_c       = (np.arange(meshx)+.5)*GS
+    # Longitudinal positions of the cells (centres)
     y_c       = (np.arange(meshy)+.5)*GS
+    # Coordinate fields
     XX,YY     = np.meshgrid(x_c,y_c)
     if NS is None:
         Ns        = int(2*(cppr_max)+2)                                                                    # Dimensions of the mini-mesh for individual shapes. MUST BE EVEN.
@@ -1605,6 +1635,37 @@ def rectangle_vel(L1,T1,L2,T2,vel,dim=1):
         VX_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
     elif dim == 1:
         VY_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
+    return
+
+def material_alpha(mat,alp):
+    """
+    This function gives all the cells containing material mat, a distension: alp
+    """
+    global alpha,materials
+    assert dim == 0 or dim ==1, 'ERROR: Dimension must be 0 or 1 (x or y)'
+    alpha[materials[mat-1]>0.] = alp #- np.sum(materials,axis=0)  
+    return
+
+def material_alpha_Fof(mat,f,dim=0):
+    """
+    This function gives all the cells containing material mat, a distension: alp = f(r)
+    if dim = 0, r = x
+    if dim = 1, r = y
+    """
+    global alpha,materials,XX,YY
+    assert dim == 0 or dim ==1, 'ERROR: Dimension must be 0 or 1 (x or y)'
+    if dim != 0: 
+        alpha[materials[mat-1]>0.] = f(YY[materials[mat-1]>0.]) #- np.sum(materials,axis=0)  
+    else:
+        alpha[materials[mat-1]>0.] = f(XX[materials[mat-1]>0.]) #- np.sum(materials,axis=0)  
+    return
+
+def material_alpha_Fofxy(mat,f,dim=0):
+    """
+    This function gives all the cells containing material mat, a distension: alp = f(x,y)
+    """
+    global alpha,materials,XX,YY
+    alpha[materials[mat-1]>0.] = f(XX[materials[mat-1]>0.],YY[materials[mat-1]>0.]) #- np.sum(materials,axis=0)  
     return
 
 def fill_rectangle(L1,T1,L2,T2,mat):
