@@ -192,7 +192,7 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
 
     GS        = GridSpc
     Ms        = mat_no                                                                                     # M is the number of materials within the mesh
-    mats      = np.arange(Ms)+1.
+    mats      = np.arange(Ms,dtype=int)+1
     meshx     = X
     meshy     = Y
     cppr_mid  = CPPR
@@ -1619,18 +1619,76 @@ def fill_rectangle(L1,T1,L2,T2,mat):
     global meshx,meshy,materials,mesh,trmesh,VX_,VY_,Ms,XX,YY
     assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
     assert T2>T1, 'ERROR: 2nd T value is less than the first, the function accepts them in ascending order' 
-    if mat == -1.:
+    if mat == -1:
         for mm in range(Ms):
             materials[mm][(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
         VX_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
         VY_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
         part_no[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] *= 0.
     else:
-        temp_materials = np.copy(materials[mat-1])
+        temp_materials = np.copy(materials[int(mat)-1])
         temp_materials[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)<1.)] = 1. #- np.sum(materials,axis=0)  
         temp_2 = np.sum(materials,axis=0)*temp_materials
         temp_materials -= temp_2
-        materials[mat-1] += temp_materials
+        materials[int(mat)-1] += temp_materials
+    return
+def fill_polygon(L,T,mat):
+    """
+    This function fills all cells within a polygon defined by the vertices in arrays L and T
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~if mat == -1. this fills the cells with VOID and overwrites everything.~
+    ~and additionally sets all velocities in those cells to zero            ~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+    global meshx,meshy,materials,mesh,trmesh,VX_,VY_,Ms,XX,YY,GS
+    path = mpath.Path(np.column_stack((L,T)))
+
+    # find the box that entirely encompasses the polygon
+    L1 = np.amin(L) 
+    L2 = np.amax(L)
+    T1 = np.amin(T)
+    T2 = np.amax(T)
+
+    # find the coordinates of every point in that box
+    Xc_TEMP = XX[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)]
+    Yc_TEMP = YY[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)]
+
+    # store all indices of each coord that is in the polygon in two arrays
+    x_success = np.ones_like(Xc_TEMP,dtype=int)*-9999
+    y_success = np.ones_like(Yc_TEMP,dtype=int)*-9999
+
+    # cycle through all these points
+    # store successes in arrays
+    k = 0
+    for x, y in zip(Xc_TEMP,Yc_TEMP):
+        in_shape = path.contains_point([x,y])
+        if in_shape:
+            x_success[k]   = np.where((XX==x)*(YY==y))[0][0] 
+            y_success[k]   = np.where((XX==x)*(YY==y))[1][0]
+            k += 1
+    x_suc = x_success[x_success!=-9999] #np.ma.masked_where(x_success==-9999,x_success)
+    y_suc = y_success[y_success!=-9999] #np.ma.masked_where(y_success==-9999,y_success)
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111,aspect='equal')
+    #ax.plot(XX[(XX==x_suc)],YY[(YY==y_suc)],linestyle=' ',marker='.')
+    #ax.plot(L,T)
+    #ax.set_xlim(L1,L2)
+    #ax.set_ylim(T1,T2)
+    #plt.show()
+
+    if mat == -1:
+        # select the necessary material using new arrays of indices
+        for mm in range(Ms):
+            materials[mm][x_suc,y_suc] *= 0.
+        VX_[x_suc,y_suc] *= 0.
+        VY_[x_suc,y_suc] *= 0.
+        part_no[x_suc,y_suc] *= 0.
+    else:
+        temp_materials = np.copy(materials[int(mat)-1,x_suc,y_suc])
+        temp_materials[(np.sum(materials[:,x_suc,y_suc],axis=0)<1.)] = 1. #- np.sum(materials,axis=0)  
+        temp_2 = np.sum(materials[:,x_suc,y_suc],axis=0)*temp_materials
+        temp_materials -= temp_2
+        materials[int(mat)-1,x_suc,y_suc] += temp_materials
     return
 def overwrite_rectangle(L1,T1,L2,T2,mat):
     """
