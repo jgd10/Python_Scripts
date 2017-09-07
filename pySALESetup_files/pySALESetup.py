@@ -1595,6 +1595,25 @@ def fill_plate(y1,y2,mat,invert=False):
             mesh[j,i]            = 1. - present_mat
     return
 
+def fill_Allmesh(mat,overwrite=False):
+    """
+    This function fills the entire mesh with a material. does NOT overwrite by default
+    """
+    global meshx,meshy,materials,mesh
+    if overwrite:
+        # Erase all materials
+        materials[:,:,:] = 0.
+        # fill with chosen material
+        materials[mat-1,:,:] = 1.
+    else:
+        # sum across material axes
+        present_mat = np.sum(materials,axis=0)                      
+        # If cell [i,j] is full, present_mat[i,j] = 1., so mat_tofill[i,j] = 0.
+        mat_tofill  = 1. - present_mat
+        # Fill chosen material mesh with the appropriate quantities
+        materials[mat-1,:,:] = mat_tofill 
+    return
+
 def rectangle_material_vel(L1,L2,T1,T2,mat,vel,dim=1):
     """
     A combination of rectangle and material vel. Gives all cells of material mat, in box constrained by
