@@ -880,8 +880,8 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,info=False
     if MATS == None: MATS = materials                                                                 # Now the materials mesh is only the default. Another mesh can be used!
     if LX   == None: LX   = meshx                                                                     # The code should still work as before.
     if LY   == None: LY   = meshy
-    if type(x0) == float: x0 = int(x0/GS)
-    if type(y0) == float: y0 = int(y0/GS)
+    if type(x0) == float or type(x0) == np.float64: x0 = int(x0/GS)
+    if type(y0) == float or type(y0) == np.float64: y0 = int(y0/GS)
     Py, Px = np.shape(shape)                                                                          # Px and Py are the dimensions of the 'shape' array
     i_edge    = x0 - Ns/2
     j_edge    = y0 - Ns/2
@@ -1150,6 +1150,7 @@ def mat_assignment(mats,xc,yc):
             MAT[i]  = mm                                                             # Randomly select one to be the current particle's material number
             materials[materials==-1*(i+1)] = mm
         i += 1                                                                       # Increment i
+    MAT = MAT.astype(int)
     return MAT
 
 
@@ -1420,7 +1421,7 @@ def discrete_contacts_number(SHAPENO,X,Y,n,PN):
 
     return A, contact_matrix
 
-def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True,info=False,ON=None): 
+def populate_materials(SHAPENO,X,Y,MATS,n,mixed=True,info=False): 
     """
     Function populates the materials meshes. Must be used after material assignment to particles before
     any block material assignment, e.g. a matrix.
@@ -1457,6 +1458,7 @@ def save_general_mesh(fname='meso_m.iSALE',mixed=False,noVel=False,info=False):
     fname   : The filename to be used for the text file being used
     mixed   : Are mixed cells used?
     noVel   : Does not include velocities in meso_m.iSALE file
+    info    : Include particle ID (i.e. #) as a column in the final file 
     
     returns nothing but saves all the info as a txt file called 'fname' and populates the materials mesh.
     """
