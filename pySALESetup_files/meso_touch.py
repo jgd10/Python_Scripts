@@ -10,12 +10,12 @@ import sys
 
 vol_frac   = .5
 X_cells    = 500 
-Y_cells    = 1000 
+Y_cells    = 500 
 PR         = 0.
 cppr       = 8
 vfraclimit = .5                               # The changeover point from random to forced contacts. > 1.0 => least contacts; = 0. Max contacts
 x_length   = 1.e-3
-y_length   = 2.e-3
+y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
 mat_no     = 5
 
@@ -156,7 +156,8 @@ ycr       =   ycr.astype(float)
 zcr       =   zcr.astype(float)
 radii     = radii.astype(float)
 
-
+XINT = XINT.astype(int)
+YINT = YINT.astype(int)
 
 """
 XY = np.column_stack((xcr,ycr))
@@ -176,15 +177,15 @@ DMY      = np.zeros_like(xcoords)
 
 
 A,B = pss.part_distance(xcr,ycr,radii,MAT,False)
-print "The Contacts Measure, A = {}".format(A)
+print "The Coordination number, A = {}".format(A)
 print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
-pss.populate_materials(I_shape,XINT,YINT,MAT,J,TRACERS=True,ON=J_shape)      # Now populate the materials meshes (NB these are different to the 'mesh' and are
-pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
-print 'save to meso_A-{:3.4f}.iSALE'.format(A)
-pss.save_general_mesh(tracers=True)
+pss.populate_materials(I_shape,XINT,YINT,MAT,J)      # Now populate the materials meshes (NB these are different to the 'mesh' and are
+#pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
+#print 'save to meso_A-{:3.4f}.iSALE'.format(A)
+pss.save_general_mesh(fname='meso_m_A-{:1.4f}.iSALE'.format(A),noVel=True)
 A2, contact_matrix = pss.discrete_contacts_number(I_shape,XINT,YINT,J,J_shape)
 print '\n'
 print "A and A2 are:", A, A2
@@ -197,19 +198,24 @@ placed_part_area = np.array(placed_part_area)
 print "total particles placed: {}".format(J)
 vol_frac_calc = np.sum(placed_part_area)/(pss.meshx*pss.meshy)
 
-if abs(vol_frac_calc - pss.vol_frac) <= 0.02:
+if abs(vol_frac_calc - vol_frac) <= 0.02:
     print "GREAT SUCCESS! Volume Fraction = {:3.3f}%".format(vol_frac_calc*100.)
 else:
     print "FAILURE. Volume Fraction = {:3.3f}%".format(vol_frac_calc*100.)
 
 
-plt.figure()
-for KK in range(pss.Ms):
+fig = plt.figure()
+ax1 = fig.add_subplot(121,aspect='equal')
+ax2 = fig.add_subplot(122,aspect='equal')
+ax1.imshow(np.ma.masked_where(pss.mesh==0.,pss.mesh))
+for KK in range(5):
     matter = np.copy(pss.materials[KK,:,:])*(KK+1)
     matter = np.ma.masked_where(matter==0.,matter)
-    plt.imshow(matter, cmap='plasma',vmin=0,vmax=pss.Ms,interpolation='nearest')
+    ax2.imshow(matter, cmap='plasma',vmin=0,vmax=pss.Ms,interpolation='nearest')
 #plt.axis('equal')
-plt.xlim(0,pss.meshx)
-plt.ylim(0,pss.meshy)
+ax1.set_xlim(0,pss.meshx)
+ax1.set_ylim(0,pss.meshy)
+ax2.set_xlim(0,pss.meshx)
+ax2.set_ylim(0,pss.meshy)
 plt.show()
 
