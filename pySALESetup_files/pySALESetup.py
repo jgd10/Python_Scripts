@@ -13,6 +13,7 @@ import matplotlib.path   as mpath
 from matplotlib.widgets import Slider, Button, RadioButtons
 import Tkinter
 import tkSimpleDialog as tksd
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def interactive_setup():
     fig, ax = plt.subplots(figsize=(15,10))
@@ -1226,8 +1227,8 @@ def part_distance(X,Y,radii,MAT,plot=False):
     B = float(B)/float(N)                                                                                 # B is the average number of contacts/particle that are 
                                                                                                          # between identical materials
     if plot == True: 
-        ax.set_title('$A = ${:1.3f}'.format(A))
-        plt.savefig('contacts_figure_A-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=600)                         # Save the figure
+        ax.set_title('$Z = ${:1.3f}'.format(A))
+        plt.savefig('contacts_figure_Z-{:1.3f}_B-{:1.3f}.png'.format(A,B),dpi=600)                         # Save the figure
         plt.show()
     
     return A, B
@@ -1241,7 +1242,7 @@ def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     This can be read by iSALE. NB X,Y and R are in physical units
     """
     if fname == 'meso':
-        fname += '_A-{:3.4f}.iSALE'.format(A)
+        fname += '_Z-{:3.4f}.iSALE'.format(A)
     else:
         pass
     
@@ -1583,18 +1584,27 @@ def check_FRACs(FRAC,mixed):
     
     return FRAC
 
-def fill_plate(y1,y2,mat,invert=False):
+def fill_plate(y1,y2,mat):
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
-    It fills all cells between y1 and y2.
+    It fills all cells between y1 and y2. if material -1 is used, this is treated as void and overwrites previous materials; 
+    additionally setting their velocities to 0.
     """
-    global meshx,meshy,materials,mesh
+    global meshx,meshy,materials,mesh,GRIDSPC
     assert y2>y1, 'ERROR: 2nd y value is less than the first, the function accepts them in ascending order' 
-    for j in range(meshx):
-        if j <= y2 and j >= y1:
-            present_mat = np.sum(materials[:,j,i])                                        # This ensures that plates override in the order they are placed.
-            materials[mat-1,j,i] = 1. - present_mat
-            mesh[j,i]            = 1. - present_mat
+    # overwrite = 1. if material -1 is used => VOID
+    ovrwt = 1
+    if mat == -1: ovrwt = 0
+    for j in range(meshy):
+        pos = j*GS
+        if pos <= y2 and pos >= y1:
+            present_mat = np.sum(materials[:,j,:],axis=0)                                        # This ensures that plates override in the order they are placed.
+            materials[mat-1,j,:] = (1. - present_mat)*(ovrwt)
+            mesh[j,:]            = (1. - present_mat)*(ovrwt)
+            if ovrwt == 0: 
+                materials[:,j,:] = 0.
+                VX_[j,:] = 0.
+                VY_[j,:] = 0.
     return
 
 def fill_Allmesh(mat,overwrite=False):
@@ -1656,6 +1666,20 @@ def rectangle_vel(L1,T1,L2,T2,vel,dim=1):
         VX_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
     elif dim == 1:
         VY_[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
+    return
+
+def plate_vel(L1,L2,vel,dim=1):
+    """
+    This function gives all the cells within the box (defined by (L1,T1) and (L2,T2) a velocity vel in direction dim
+    provided they contain some material! Void is given no velocity.
+    """
+    global VX_,VY_,materials
+    assert L2>L1, 'ERROR: 2nd L value is less than the first, the function accepts them in ascending order' 
+    assert dim == 0 or dim ==1, 'ERROR: Dimension must be 0 or 1, x or y'
+    if dim == 0:
+        VX_[(YY<=L2)*(YY>=L1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
+    elif dim == 1:
+        VY_[(YY<=L2)*(YY>=L1)*(np.sum(materials,axis=0)>0.)] = vel #- np.sum(materials,axis=0)  
     return
 
 def material_alpha(mat,alp):
@@ -1724,13 +1748,13 @@ def fill_polygon(L,T,mat):
     """
     global meshx,meshy,materials,mesh,trmesh,VX_,VY_,Ms,XX,YY,GS
     path = mpath.Path(np.column_stack((L,T)))
-
+    print np.column_stack((L,T))
     # find the box that entirely encompasses the polygon
     L1 = np.amin(L) 
     L2 = np.amax(L)
     T1 = np.amin(T)
     T2 = np.amax(T)
-
+    
     # find the coordinates of every point in that box
     Xc_TEMP = XX[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)]
     Yc_TEMP = YY[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)]
@@ -1761,7 +1785,7 @@ def fill_polygon(L,T,mat):
     if mat == -1:
         # select the necessary material using new arrays of indices
         for mm in range(Ms):
-            materials[mm][x_suc,y_suc] *= 0.
+           materials[mm][x_suc,y_suc] *= 0.
         VX_[x_suc,y_suc] *= 0.
         VY_[x_suc,y_suc] *= 0.
         part_no[x_suc,y_suc] *= 0.
@@ -1787,7 +1811,11 @@ def overwrite_rectangle(L1,T1,L2,T2,mat):
     part_no[(XX<=L2)*(XX>=L1)*(YY<=T2)*(YY>=T1)] = 0.
     return
 
-def fill_sinusoid(L1,T1,func,L2,mat,mixed=False,tracers=False,ON=None):
+def fill_sinusoid(L1,T1,A,w,p,c,L2,mat,mixed=False,tracers=False,ON=None):
+    def sinfunc(D,A,w,p):
+        theta = (2.*np.pi*D/w) + p 
+        E = A*np.sin(theta) + c
+    return E
     """
     This function creates a 'plate' structure across the mesh, filled with the material of your choice. Similar to PLATE in iSALE
     It fills all cells between y1 and y2.
@@ -1800,7 +1828,7 @@ def fill_sinusoid(L1,T1,func,L2,mat,mixed=False,tracers=False,ON=None):
             Tc = 0.5*(yh[j] + (yh[j+1]))                        
             Lc = 0.5*(xh[i] + (xh[i+1]))                                                                    
             dx = abs(xh[i+1] - xh[i])
-            if Tc <= func(Lc) and Tc >= T1 and Lc >= L1 and Lc <= L2:
+            if Tc <= sinfunc(Lc) and Tc >= T1 and Lc >= L1 and Lc <= L2:
                 #materials[:,i,j]     = 0.                                                            # This ensures that plates override in the order they are placed.
                 if mixed:
                     ll = np.linspace(xh[i],xh[i+1],11)                                                        # Split into 10x10 grid and fill, depending on these values.
@@ -1810,7 +1838,7 @@ def fill_sinusoid(L1,T1,func,L2,mat,mixed=False,tracers=False,ON=None):
                         for J in range(10):
                             llc = (ll[I] + ll[I+1])/2.
                             ttc = (tt[J] + tt[J+1])/2.
-                            if ttc <= func(llc) and llc >= L1 and ttc >= T1 and llc <= L2:
+                            if ttc <= sinfunc(llc) and llc >= L1 and ttc >= T1 and llc <= L2:
                                 counter += 1
                     present_mat = np.sum(materials[:,j,i])
                     new_mat     = counter*.1**2.
@@ -1827,7 +1855,7 @@ def fill_sinusoid(L1,T1,func,L2,mat,mixed=False,tracers=False,ON=None):
                         mesh[j,i]            = 1.
                     else:
                         pass
-            elif mixed and abs(Tc-func(Lc)) <= 2.*dx and Lc >= L1 and Tc >= T1 and Lc <= L2:
+            elif mixed and abs(Tc-sinfunc(Lc)) <= 2.*dx and Lc >= L1 and Tc >= T1 and Lc <= L2:
                 ll = np.linspace(xh[i],xh[i+1],11)                                                        # Split into 10x10 grid and fill, depending on these values.
                 tt = np.linspace(yh[j],yh[j+1],11)                        
                 counter = 0
@@ -1835,7 +1863,7 @@ def fill_sinusoid(L1,T1,func,L2,mat,mixed=False,tracers=False,ON=None):
                     for J in range(10):
                         llc = (ll[I] + ll[I+1])/2.
                         ttc = (tt[J] + tt[J+1])/2.
-                        if ttc <= func(llc) and llc >= L1 and ttc >= T1 and llc <= L2:
+                        if ttc <= sinfunc(llc) and llc >= L1 and ttc >= T1 and llc <= L2:
                             counter += 1
                 present_mat = np.sum(materials[:,j,i])
                 new_mat     = counter*.1**2.
@@ -2117,5 +2145,101 @@ def shape_info(fname):
 
     return elongation,A_ratio,roundness
 
+def display_mesh(showvel=False):
+    global mesh, materials, Ms, meshx, meshy
+    fig = plt.figure()
+    if showvel:
+        ax1 = fig.add_subplot(131,aspect='equal')
+        ax2 = fig.add_subplot(132,aspect='equal')
+        ax3 = fig.add_subplot(133,aspect='equal')
+        vL_ = ax2.pcolormesh(XX,YY,VY_,cmap='bone',vmin=np.amin(VY_),vmax=np.amax(VY_))
+        vT_ = ax3.pcolormesh(XX,YY,VX_,cmap='bone',vmin=np.amin(VY_),vmax=np.amax(VY_))
+        ax2.set_title('Longitudinal Vel')
+        ax3.set_title('Transverse Vel')
+        divider = make_axes_locatable(ax3)
+        cax = divider.append_axes('right',size='5%',pad=0.05)
+        cb = fig.colorbar(vL_,cax=cax,orientation='vertical')
+        cb.set_label('Velocity  [ms$^{-1}$]')
 
+    else:
+        ax1 = fig.add_subplot(111,aspect='equal')
+    for KK in range(Ms):
+        matter = np.copy(materials[KK,:,:])*(KK+1)
+        matter = np.ma.masked_where(matter==0.,matter)
+        ax1.imshow(matter, cmap='copper',vmin=0,vmax=Ms,interpolation='nearest')
+    #ax1.set_xlim(0,np.amax(XX))
+    #ax1.set_ylim(0,np.amax(YY))
+    ax1.set_xlim(0,meshx)
+    ax1.set_ylim(0,meshy)
 
+    #ax1.set_title('Mesh')
+    ax1.set_title('Materials')
+    fig.tight_layout()
+    plt.show()
+    return
+
+def Fabric_Tensor_disks(ic,jc,r,tolerance=0.):
+    """
+    This function calculates the fabric tensor of a 2D particle ensemble consisting of
+    perfectly circular disks. They do NOT have to be identical in size!
+
+    input:
+
+    ic = x-coordinates of each particle centre [float,array]
+    jc = y-coordinates of each particle centre [float,array]
+    a  = corresponding radii of each particle  [float,array]
+
+    output:
+
+    Z  = The coordination number (called A, in the past by myself)
+    A  = The Fabric Anisotropy
+    F  = The fabric tensor (2nd order)
+    """
+    # simple function to compute all possible differences between elements in an array
+    def difference_matrix(a):
+        x = np.reshape(a, (len(a), 1))
+        return x - x.transpose()
+    # This function similarly finds all possible combinations of elements in an array.
+    def addition_matrix(a):
+        x = np.reshape(a, (len(a), 1))
+        return x + x.transpose()
+
+    # Number of particles
+    Np = np.size(ic)
+    # Maximum number of possible contacts (no particle can have more than 6 each)
+    nc = np.zeros((Np*6))
+    # two arrays; one with all possible x-distances bewteen particles (li)
+    # one with all possible y-distances (lj)
+    # NB each has a shape of Np x Np and the matrices are 'flipped' sign-wise along the diagonal
+    # and the diagonals are zeros
+    li = difference_matrix(ic)
+    lj = difference_matrix(jc)
+    # s is all possible combinations of radii in the same order. i.e. 
+    # elements of s are the minimum corresponding distances required for a 'contact'
+    # Add a tolerance because we are not necessarily working with perfect circles, there is 
+    # an uncertainty on the minimum length required for a contact 
+    s  = addition_matrix(r) + tolerance
+    # The magnitude (length) of each branch vector is
+    L  = np.sqrt(li**2. + lj**2.)
+    L[L==0] = 1.
+    # normalise all branch vectors
+    li /= L 
+    lj /= L
+    # set all branch vectors that are not contacts equal to 9999.
+    li[L>=s] = 9999.
+    lj[L>=s] = 9999.
+    # Remove any branches of zero length (impossibilities) and flatten the arrays
+    # NB every contact appears twice in each array!! Each has a size of 2*Nc (No. contacts)
+    ni = li[li!=9999.]
+    nj = lj[lj!=9999.]
+    
+    F = np.zeros((2,2))
+    F[0,0] = np.sum(ni**2.)/float(Np)
+    F[1,1] = np.sum(nj**2.)/float(Np)
+    
+    F[0,1] = np.sum(ni*nj)/float(Np)
+    F[1,0] = F[0,1]
+
+    Z = F[0,0] + F[1,1]
+    A = F[0,0] - F[1,1]
+    return Z, A, F
