@@ -1,6 +1,7 @@
 # base code acquired from here:
 # https://zulko.wordpress.com/2012/09/29/extract-data-from-graph-pictures-with-python/
 from PIL import Image
+from scipy.misc import imread
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
@@ -38,9 +39,10 @@ def askValueS(text='',initialvalue='viridis'):
 ##### GET THE IMAGE
 
 fname = sys.argv[1]
-image  = Image.open(fname)
-rgb_im = image.convert('RGB')
-img  = np.array(rgb_im)
+#image  = Image.open(fname)
+#rgb_im = image.convert('RGB')
+image  = imread(sys.argv[1]) #np.array(rgb_im)
+img    = image
 #image = mpimg.imread(argv[1])
 origin = 'upper'
 
@@ -88,7 +90,17 @@ if range1 > range2:
 elif range1 < range2:
     AXS = 1
 
-CB_ = np.mean(cbar_,axis=AXS).astype(float)
+cb_ = np.mean(cbar_,axis=AXS).astype(float)
+M,stuff   = np.shape(cb_)
+cb_interp = np.zeros((M*10,3))
+x         = np.arange(M)+1
+xinterp   = np.linspace(1,M,M*10)
+cb_interp[:,0] = np.interp(xinterp,x,cb_[:,0])
+cb_interp[:,1] = np.interp(xinterp,x,cb_[:,1])
+cb_interp[:,2] = np.interp(xinterp,x,cb_[:,2])
+
+CB_ = np.copy(cb_interp)
+
 CN  = np.size(CB_[:,0])
  
 
@@ -136,7 +148,7 @@ ax1.set_ylabel('RGB value')
 ax1.legend(loc='best',numpoints=1,fontsize='xx-small')
 
 ax2 = fig.add_subplot(222)
-mplimage = mpimg.imread(fname)
+mplimage = imread(fname)
 ax2.set_title('original image')
 ax2.imshow(mplimage,origin=origin)
 ax2.axis('off')
