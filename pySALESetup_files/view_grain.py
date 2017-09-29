@@ -1,5 +1,4 @@
 import numpy as np
-import pySALEPlot as psp
 import random
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
@@ -32,3 +31,4 @@ ax.add_patch(patch)
 ax.set_xlim(-500,500)
 ax.set_ylim(-500,500)
 plt.savefig('./grain_aspect-{}.png'.format(argv[1]),dpi=300)
+plt.show()
