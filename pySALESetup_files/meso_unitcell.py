@@ -21,10 +21,10 @@ mat_no     = 5
 pss.generate_mesh(X_cells,Y_cells,mat_no,cppr,PR,vol_frac)
 mats = pss.mats
 
-part_area  = np.zeros((1))
 cppr_range = pss.cppr_max - pss.cppr_min
 r = pss.cppr_mid
-pss.mesh_Shps[0,:,:],part_area[0] = pss.gen_circle(r)
+pss.mesh_Shps[0,:,:] = pss.gen_circle(r)
+part_area = np.sum(pss.mesh_Shps[0])
 
 lx, ly = 35., 35.
 UC = pss.unit_cell(LX=lx,LY=ly)
