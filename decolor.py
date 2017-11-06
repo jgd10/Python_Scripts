@@ -116,21 +116,11 @@ for k in np.arange(CN):
     dummy[B] *= 0. 
     dummy[B] += 1. - k/(CN-1.)
 
-data2 = dummy[:,:,0].copy()
+data2  = dummy[:,:,0].copy()
 data2  = np.ma.masked_where(data2<0.,data2)
 data2 *= abs(C0_val - C1_val)
 data2 += min(C0_val,C1_val)
 
-"""
-X0val = askValue('input the horizontal axis lower limit',0.)
-X1val = askValue('input the horizontal axis upper limit',1.)
-Y0val = askValue('input the vertical axis lower limit',0.)
-Y1val = askValue('input the vertical axis upper limit',1.)
-
-Nx,Ny = np.shape(data2)
-xc = np.linspace(X0val,X1val,Nx)
-yc = np.linspace(Y1val,Y0val,Ny)
-"""
 
 np.savetxt('ripped_data_from_{}.csv'.format(fname[:-4]),data2)
 cpal = askValueS('New cmap string','viridis')
@@ -147,11 +137,11 @@ ax1.set_xlabel('data values')
 ax1.set_ylabel('RGB value')
 ax1.legend(loc='best',numpoints=1,fontsize='xx-small')
 
-ax2 = fig.add_subplot(222)
+ax3 = fig.add_subplot(222)
 mplimage = imread(fname)
-ax2.set_title('original image')
-ax2.imshow(mplimage,origin=origin)
-ax2.axis('off')
+ax3.set_title('original image')
+ax3.imshow(mplimage,origin=origin)
+ax3.axis('off')
 
 #ax3 = fig.add_subplot(223)
 #ax3.set_title('new image (pcolormesh)')
