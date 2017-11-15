@@ -6,6 +6,11 @@ pySALESetup_files/*.eps
 pySALESetup_files/*.pdf
 pySALESetup_files/*.iSALE
 pySALESetup_files/*.pyc
+pySALESetup_files/*/*.png
+pySALESetup_files/*/*.eps
+pySALESetup_files/*/*.pdf
+pySALESetup_files/*/*.iSALE
+pySALESetup_files/*/*.pyc
 *.png
 *.eps
 *.pdf
