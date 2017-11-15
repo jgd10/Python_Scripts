@@ -11,6 +11,7 @@ pySALESetup_files/*/*.eps
 pySALESetup_files/*/*.pdf
 pySALESetup_files/*/*.iSALE
 pySALESetup_files/*/*.pyc
+pySALESetup_files/mesh_creation/pySALESetup.py
 *.png
 *.eps
 *.pdf
