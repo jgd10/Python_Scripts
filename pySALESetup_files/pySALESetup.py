@@ -260,6 +260,35 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     FRAC      = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
     OBJID     = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
 
+def setup_mesh_from_mesom(fpath='meso_m.iSALE',GSInput=2.e-6):
+    global materials,VX_,VY_
+    with open(fpath, 'r') as f:
+            first_line = f.readline().strip()
+    topline = np.fromstring(first_line,sep=',')
+    mat_no = int(np.amin(topline))
+    N      = int(np.amax(topline))
+    I     = np.genfromtxt(fpath,usecols=(0),skip_header=1).astype(int)
+    J     = np.genfromtxt(fpath,usecols=(1),skip_header=1).astype(int)
+    VX    = np.genfromtxt(fpath,usecols=(2),skip_header=1)
+    VY    = np.genfromtxt(fpath,usecols=(3),skip_header=1)
+    FRAC = np.zeros((mat_no,N))
+    for col in range(mat_no):
+        FRAC[col] = np.genfromtxt(fpath,usecols=(col+4),skip_header=1)
+
+    meshx = np.amax(I) + 1
+    meshy = np.amax(J) + 1
+    generate_mesh(meshx, meshy, mat_no = mat_no, GridSpc = GSInput)
+
+    for i in range(N):
+        for m in range(mat_no):
+            materials[m,I[i],J[i]] = FRAC[m,i]
+        VX_[I[i],J[i]] = VX[i]
+        VY_[I[i],J[i]] = VY[i]
+
+    display_mesh(showvel=True)
+
+
+
 def unit_cell(LX=None,LY=None):
     global meshx,meshy,cppr_mid,Ms,trmesh
     if LX == None: LX = int(meshx/10) 
