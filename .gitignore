@@ -1,0 +1,6 @@
+diagrams/*.eps
+diagrams/*.pdf
+diagrams/*.png
+pySALESetup_files/*.png
+pySALESetup_files/*.eps
+pySALESetup_files/*.pdf
