@@ -176,23 +176,29 @@ MAT      = pss.mat_assignment(mats,xcr,ycr)
 DMY      = np.zeros_like(xcoords)
 
 
-A,B = pss.part_distance(xcr,ycr,radii,MAT,False)
-print "The Coordination number, A = {}".format(A)
+Z,B = pss.part_distance(xcr,ycr,radii,MAT,False)
+print "The Coordination number, Z = {}".format(Z)
 print "Avg Contacts Between the Same Materials, B = {}".format(B)
 print 'Total contacts between same materials = {}, Total particles = {}'.format(B*J,J)
 ALL = np.column_stack((MAT,xcr,ycr,radii))
 
 pss.populate_materials(I_shape,XINT,YINT,MAT,J)      # Now populate the materials meshes (NB these are different to the 'mesh' and are
+P = 6
+K = pss.max_porosity_variation(partitions=P)
 #pss.save_spherical_parts(xcr,ycr,radii,MAT,A)
 #print 'save to meso_A-{:3.4f}.iSALE'.format(A)
-pss.save_general_mesh(fname='meso_m_A-{:1.4f}.iSALE'.format(A),noVel=True)
-A2, contact_matrix = pss.discrete_contacts_number(I_shape,XINT,YINT,J,J_shape)
+#pss.save_general_mesh(fname='meso_m_A-{:1.4f}.iSALE'.format(A),noVel=True)
+Z2, contact_matrix = pss.discrete_contacts_number(I_shape,XINT,YINT,J,J_shape)
+Z3,A,F = pss.Fabric_Tensor_disks(xcr,ycr,radii,tolerance=1.e-6)
 print '\n'
-print "A and A2 are:", A, A2
+print "Z; discrete Z; Fabric Tensor Z: {:3.2f}, {:3.2f}, {:3.2f}".format(Z, Z2, Z3)
+print "Fabric Anisotropy A: {:3.4f}".format(A)
+print "Max Porosity variation across {} partitions: {:3.2f}%".format(P,K*100.)
 print '\n'
 
 
-timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
+
+#timestr = time.strftime('%d-%m-%Y_%H-%M-%S')
 #np.savetxt('{}cppr_{}vfrlim_A{:1.3f}_{}.iSALE'.format(cppr,vfraclimit,A,timestr),ALL)
 placed_part_area = np.array(placed_part_area)
 print "total particles placed: {}".format(J)
