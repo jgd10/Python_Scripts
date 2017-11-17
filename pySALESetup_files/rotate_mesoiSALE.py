@@ -5,8 +5,8 @@ mats = np.genfromtxt(sys.argv[1],dtype=float,usecols=(0))
 x    = np.genfromtxt(sys.argv[1],dtype=float,usecols=(1))
 y    = np.genfromtxt(sys.argv[1],dtype=float,usecols=(2))
 r    = np.genfromtxt(sys.argv[1],dtype=float,usecols=(3))
-frac = 1./2.
-theta = np.pi* frac
+frac = 90.
+theta = np.pi* frac/180.
 c = np.cos(theta)
 s = np.sin(theta)
 
