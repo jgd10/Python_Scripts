@@ -209,15 +209,15 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     # if cppr_max and min predefined
     if np.size(PR)>1:
         # Minimum particle size
-        cppr_min  = PR[0]*cppr_mid                                                                          
+        cppr_min  = int(PR[0]*cppr_mid)
         # Maximum particle size
-        cppr_max  = PR[1]*cppr_mid  
+        cppr_max  = int(PR[1]*cppr_mid)
     # else if just PR defined
     else:
         # Maximum particle size
-        cppr_max  = cppr_mid*(1.+PR)
+        cppr_max  = int(cppr_mid*(1.+PR))
         # Minimum particle size
-        cppr_min  = cppr_mid*(1.-PR)
+        cppr_min  = int(cppr_mid*(1.-PR))
 
     # Volume fraction field 
     mesh      = np.zeros((meshy,meshx))
@@ -259,6 +259,69 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
                                                                                                            # N (Ns x Ns x N)
     FRAC      = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
     OBJID     = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
+
+def max_porosity_variation(partitions=2):
+    """
+    Function that finds the largest varition in porosity across the entire mesh. 
+    This will give incorrect answers when the mesh is not purely granular.
+    returns the maximum difference between two partitions of the same orientation.
+    """
+    mesh = np.sum(materials,axis=0)
+    mesh[mesh>1.] = 1.
+    pores = 1.-mesh
+
+    # create arrays to store vert and horiz partition porosities
+    pores_T = np.ones(partitions)*-9999.
+    pores_L = np.ones(partitions)*-9999.
+
+    # divide the mesh into intervals divT and divL wide
+    divT = int(meshx/float(partitions))
+    divL = int(meshy/float(partitions))
+    for p in range(partitions):
+        #print mesh[p*divT:(p+1)*divT,:]
+        pores_T[p] = np.mean(mesh[p*divT:(p+1)*divT,:])
+        pores_L[p] = np.mean(mesh[:,p*divL:(p+1)*divL])
+    
+    # find the maximum difference between partitions
+    maxdiff_T = np.amax(pores_T) - np.amin(pores_T)
+    maxdiff_L = np.amax(pores_L) - np.amin(pores_L)
+    
+    # Find the largest of these twp
+    maxdiff = max(maxdiff_T,maxdiff_L)
+    return maxdiff
+        
+
+def setup_mesh_from_mesom(fpath='meso_m.iSALE',GSInput=2.e-6):
+    """
+    Sets up a mesh from a meso_m.iSALE file. Once complete, the new mesh can be edited further. 
+    NB the cellsize is a required input as this is not stored in meso_m.iSALE!
+    """
+    global materials,VX_,VY_
+    with open(fpath, 'r') as f:
+            first_line = f.readline().strip()
+    topline = np.fromstring(first_line,sep=',')
+    mat_no = int(np.amin(topline))
+    N      = int(np.amax(topline))
+    I     = np.genfromtxt(fpath,usecols=(0),skip_header=1).astype(int)
+    J     = np.genfromtxt(fpath,usecols=(1),skip_header=1).astype(int)
+    VX    = np.genfromtxt(fpath,usecols=(2),skip_header=1)
+    VY    = np.genfromtxt(fpath,usecols=(3),skip_header=1)
+    FRAC = np.zeros((mat_no,N))
+    for col in range(mat_no):
+        FRAC[col] = np.genfromtxt(fpath,usecols=(col+4),skip_header=1)
+
+    meshx = np.amax(I) + 1
+    meshy = np.amax(J) + 1
+    generate_mesh(meshx, meshy, mat_no = mat_no, GridSpc = GSInput)
+
+    for i in range(N):
+        for m in range(mat_no):
+            materials[m,I[i],J[i]] = FRAC[m,i]
+        VX_[I[i],J[i]] = VX[i]
+        VY_[I[i],J[i]] = VY[i]
+
+    return
+
 
 def unit_cell(LX=None,LY=None):
     global meshx,meshy,cppr_mid,Ms,trmesh
@@ -730,7 +793,6 @@ def drop_shape_into_mesh(shape):
         #i_finl   = x + cppr_max + 1                                                                        # The indices refer to the close edge to the origin,
                                                                                                         # the extra cell should be added on the other side
         #j_finl   = y + cppr_max + 1                                                                        # i.e. the side furthest from the origin
-            
         if i_edge < 0:                                                                                  # If the coords have the particle being generated over the mesh boundary
             I_initial = abs(i_edge)                                                                     # This bit checks for this, and reassigns a negative starting
                                                                                                         # index to zero
@@ -752,7 +814,6 @@ def drop_shape_into_mesh(shape):
         if (j_finl)>Ny:
             J_final -= abs(Ny-j_finl) 
             j_finl   = Ny
-        
         
         temp_shape = np.copy(shape[J_initial:J_final,I_initial:I_final])                                # The rectangular array containing the portion of shape 
                                                                                                         # to be placed into mesh 
