@@ -2243,3 +2243,18 @@ def Fabric_Tensor_disks(ic,jc,r,tolerance=0.):
     Z = F[0,0] + F[1,1]
     A = F[0,0] - F[1,1]
     return Z, A, F
+
+def view_all_materials(save=False,fname='targetbed.png'):
+    global Ms,materials,meshx,meshy
+
+    fig = plt.figure()
+    ax  = fig.add_subplot(111,aspect='equal')
+    for KK in range(Ms):
+        matter = np.copy(materials[KK,:,:])*(KK+1)
+        matter = np.ma.masked_where(matter==0.,matter)
+        ax.imshow(matter, cmap='plasma',vmin=0,vmax=Ms,interpolation='nearest')
+    ax.set_xlim(0,meshx)
+    ax.set_ylim(0,meshy)
+    if save: fig.savefig(fname,bbox_inches='tight',dpi=300)
+    plt.show()
+    return

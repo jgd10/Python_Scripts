@@ -2,6 +2,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import pySALESetup as pss
+import sys
 
                                                                     # Define details of the particle bed 
 vol_frac   = .5
@@ -76,7 +77,8 @@ try:
             print '##########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##########'
             break
         old_vfrac = vol_placed_frac
-        print "volume fraction achieved so far: {:3.3f}%".format(vol_placed_frac*100)
+        print "\rvolume fraction achieved so far: {:3.3f}%".format(vol_placed_frac*100),
+        sys.stdout.flush()
         
 except KeyboardInterrupt:
     pass
@@ -101,9 +103,10 @@ ycr     *= GRIDSPC
 MAT      = pss.mat_assignment(pss.mats,xcr,ycr)                     # Assign materials to the particles
 radii   *= GRIDSPC
 
-#pss.save_spherical_parts(xcr,ycr,radii,MAT,A,fname='coords.txt')   # Save particle coordinates, radii and material number as a txt file with file name fname
-                                                                    # When fname is not 'meso' A doe snot need to be anything and can just be zero as it is not used
-pss.save_particle_mesh(I_shape,XINT,YINT,MAT,J)                     # Save full mesh as a meso_m.iSALE file. NB This uses the integer coords we had before
+pss.save_spherical_parts(xcr,ycr,radii,MAT,A,fname='coords.txt')    # Save particle coordinates, radii and material number as a txt file with file name fname
+                                                                    # When fname is not 'meso' A does not need to be anything and can just be zero as it is not used
+pss.populate_materials(I_shape,XINT,YINT,MAT,J)                     # populate the materials meshes 
+pss.save_general_mesh()                                             # Save full mesh as a meso_m.iSALE file. NB This uses the integer coords we had before
 
 
 print "total particles placed: {}".format(J)
