@@ -119,6 +119,12 @@ def interactive_setup():
 
     plt.show()
 
+def clear_mesh():
+    global mesh, materials
+    mesh      *= 0
+    materials *= 0
+    return
+
 def generate_particle_list(shape,rotation=False):
     cppr_range = cppr_max-cppr_min
     if shape == 'ellipses': e = tksd.askfloat('Eccentricity of Ellipses','Value:',initialvalue=.5)
@@ -261,13 +267,14 @@ def generate_mesh(X=500,Y=500,mat_no=5,CPPR=10,pr=0.,GridSpc=2.e-6,NS=None,NP=20
     OBJID     = np.zeros((Ms,meshx*meshy))                                                                 # An array for storing the fractions of material 
 
 def max_porosity_variation(partitions=2):
+    global mesh
     """
     Function that finds the largest varition in porosity across the entire mesh. 
     This will give incorrect answers when the mesh is not purely granular.
     returns the maximum difference between two partitions of the same orientation.
     """
-    mesh = np.sum(materials,axis=0)
-    mesh[mesh>1.] = 1.
+    #mesh = np.sum(materials,axis=0)
+    #mesh[mesh>1.] = 1.
     pores = 1.-mesh
 
     # create arrays to store vert and horiz partition porosities
@@ -1295,7 +1302,7 @@ def part_distance(X,Y,radii,MAT,plot=False):
     return A, B
 
 
-def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
+def save_spherical_parts(X,Y,R,MATS,Z,fname='meso'):
     global mesh, mesh_Shps,meshx,meshy,FRAC,OBJID,materials,trmesh
     """
     Saves particle placement information in a meso.iSALE file in format:
@@ -1303,7 +1310,7 @@ def save_spherical_parts(X,Y,R,MATS,A,fname='meso'):
     This can be read by iSALE. NB X,Y and R are in physical units
     """
     if fname == 'meso':
-        fname += '_Z-{:3.4f}.iSALE'.format(A)
+        fname += '_Z-{:3.4f}.iSALE'.format(Z)
     else:
         pass
     
