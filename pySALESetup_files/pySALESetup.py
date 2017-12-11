@@ -772,7 +772,7 @@ def drop_shape_into_mesh(shape):
     """
     global mesh, meshx, meshy, cppr_max, cppr_min, materials
     
-    cell_limit = (np.pi*float(cppr_max)**2.)/100.                                                        # Max number of overlapping cells should scale with area.
+    cell_limit = max((np.pi*float(cppr_max)**2.)/100.,1)                                                # Max number of overlapping cells should scale with area.
                                                                                                         # area ~= 110 cells for 6cppr
                                                                                                         # Does NOT need to be integer since values in the mesh are floats, 
                                                                                                         # and it is their sum that is calculated.
