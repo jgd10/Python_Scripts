@@ -7,12 +7,12 @@ import sys
 # All parameters required to make a particle bed
 vol_frac   = .5
 X_cells    = 500 
-Y_cells    = 500 
+Y_cells    = 1000 
 # Particle size range, as a fraction. e.g. 0.1 gives a variation in size of 10%
 PR         = 0.
-cppr       = 8
+cppr       = 4
 # Threshold at which algorithm begins walking particles into contacts
-vfraclimit = .5                     
+vfraclimit = .4                     
 x_length   = 1.e-3
 y_length   = 1.e-3
 GRIDSPC    = x_length/X_cells
@@ -189,7 +189,7 @@ vol_frac_calc = np.sum(placed_part_area)/(pss.meshx*pss.meshy)
 if abs(vol_frac_calc - vol_frac) <= 0.02:
     print "GREAT SUCCESS! Volume Fraction = {:3.3f}%".format(vol_frac_calc*100.)
     # save the resulting bed and use the contacts number as an identifier
-    pss.save_spherical_parts(xcr,ycr,radii,MAT,Z)
+    pss.save_spherical_parts(xcr,ycr,radii,MAT,Z,fname='meso_{}cppr_Z-{:1.1f}.iSALE'.format(cppr,Z3))
 else:
     print "FAILURE. Volume Fraction = {:3.3f}%".format(vol_frac_calc*100.)
 
