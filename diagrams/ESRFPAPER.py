@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
+import matplotlib
+plt.rc('text', usetex=True)
+plt.rc('text.latex', preamble=r'\usepackage{amsmath} \usepackage{wasysym}')
 
 fig = plt.figure(figsize=(6.,3.))
 ax = fig.add_subplot(111,aspect='equal')
@@ -15,6 +18,8 @@ ax.set_ylim(-25,+25)
 mag = plt.cm.magma
 
 sabot   = patches.Rectangle((9.,-6.35),       width=15.,height=12.7,color='silver')#'darkblue')
+ax.annotate(r"$V_I\approx 600 \text{ms}^{-1}$",xy=(23,-15.),textcoords='data',ha='center',va='center',rotation=180,fontsize=7)
+impact = patches.Arrow(20,-15,10,0,color='k',width=5,fill=False)
 
 #sabota  = patches.Rectangle((7.5,-6.35),      width=1., height=12.7,color=mag(0.0))#'darkblue')
 #sabotb  = patches.Rectangle((6.25,-6.35),      width=.75,height=12.7,color=mag(0.0))#'darkblue')
@@ -24,15 +29,74 @@ flyer   = patches.Rectangle((24.,-6.35),      width=2. ,height=12.7,color='brown
 drivera = patches.Rectangle((27.,-length/2.),  width=1.,height=25.4,color='silver')#'c')
 driverb = patches.Rectangle((28.,-5.),        width=1. ,height=10. ,color='silver')#'c')
 Alwalla = patches.Rectangle((28.,-6.),        width=11.,height=1.  ,color='grey')#'.5')
+Albrima = patches.Rectangle((28.,-12.7),        width=1., height=7.55  ,color='grey')#'.5')
 Alwallb = patches.Rectangle((28.,5.),         width=11.,height=1.  ,color='grey')#'.5')
-sipernt = patches.Rectangle((29.,-5.),        width=6. ,height=10  ,color='plum')#'lightsteelblue')
-window  = patches.Rectangle((35.,-5.),        width=6. ,height=10  ,color='silver')#'tan')
+Albrimb = patches.Rectangle((28.,5.),         width=1., height=7.7  ,color='grey')#'.5')
+sipernt = patches.Rectangle((29.,-5.),        width=6. ,height=10.  ,color='plum',ls='--')#'lightsteelblue')
+window  = patches.Rectangle((35.,-5.),        width=6. ,height=10.  ,color='beige')#'tan')
+
+# scale bar
+#scale_1 = patches.Rectangle((31.5,-12.7),        width=3. ,height=6.  ,color='k')#'tan')
+#ax.annotate("6 mm",xy=(33.,-9.7),textcoords='data',ha='center',va='center',rotation=90,color='w',fontsize=9)
 
 
+# 2.5x bigger
 siperntZOOM = patches.Rectangle((50.,-12.5),        width=15. ,height=25.  ,color='plum')#'lightsteelblue')
+siperntZOOMbox = patches.Rectangle((50.,-12.5),        width=15. ,height=25.  ,color='k',fill=False,ls='--')#'lightsteelblue')
+ax.annotate(r"$\times 2.5$ zoom",xy=(52,6.),textcoords='data',ha='center',va='center',rotation=90)
+ax.annotate("",xy=(50., -13.5),xytext=(65., -13.5), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3"))
+ax.annotate("6 mm",xy=(57.5,-14.5),textcoords='data',ha='center',va='center',rotation=180)
+ax.annotate("",xy=(64., -12.5),xytext=(64., 12.5), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3"))
+ax.annotate("10 mm",xy=(62.5,0.),textcoords='data',ha='center',va='center',rotation=90)
+rod     = patches.Rectangle((55.-1.25,-10.), width=2.5,height=20,color='blue')
+rod2    = patches.Circle((55.,16.), radius = 1.25,color='b')
+ax.plot([55.,55.],[9.,18.],linestyle=':',color='k',lw=.8)
+ax.plot([53.,57.],[16.,16.],linestyle=':',color='k',lw=.8)
+ax.annotate("rod",xy=(55,0.),textcoords='data',ha='center',va='center',rotation=90,color='w')
 
-ax.plot([35,50],[-5,-12.5],color='k')
-ax.plot([35,50],[5,12.5],color='k')
+# simulated region
+simregn = patches.Rectangle((18,-12.7),width=24,height=25.4,fill=False,color='k',ls='-.',zorder=3,label='iSALE')
+# x-ray fov
+xrayfov = patches.Rectangle((27,-6.05),width=12.1,height=12.1,fill=False,color='r',ls=':',zorder=3,label='X-ray FoV')
+
+# legend for the above
+ax.annotate("iSALE FoV" ,(74,-14),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate("X-ray FoV" ,(78,-14),ha='center',va='center',fontsize=8,rotation=90)
+ax.plot([74,74],[-25,-20],color='k',linestyle='-.')
+ax.plot([78,78],[-25,-20],color='r',linestyle=':')
+
+# sipernat grains zoomed in
+zmcirc  = patches.Circle((72.,17.), radius=5.,fill=False,ls='--',lw=1.,color='k')
+grainsx = [69,74,72,70,75,69,71,74,73,71]
+grainsy = [15,20,16,16,19,17,14,14,15,20]
+ax.plot(grainsx,grainsy,marker='.',color='plum',linestyle=' ',mec='k')
+ax.annotate("Matrix" ,(69,6),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate(r"$\diameter\approx7~\mu$m" ,(72,6),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate(r"$\phi \approx 70\%$" ,(75,6),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate(r"iSALE: $\epsilon-\alpha$ model" ,(78,6),ha='center',va='center',fontsize=8,rotation=90)
+
+# zoom lines
+ax.plot([35,50],[-5,-12.5],color='k',ls='--',zorder=10,lw=1)
+ax.plot([35,50],[5,12.5],color='k',ls='--',zorder=10,lw=1)
+ax.plot([61,67],[8,18],color='k',ls='--',zorder=10,lw=1)
+ax.plot([61,73],[8,12],color='k',ls='--',zorder=10,lw=1)
+
+#pre-shot xrays
+xrays1 = patches.Arrow(28,-25,0,10,color='k',width=5,fill=False)
+xrays2 = patches.Arrow(32,-25,0,10,color='k',width=5,fill=False)
+xrays3 = patches.Arrow(36,-25,0,10,color='k',width=5,fill=False)
+ax.annotate("X-RAYS" ,(25,-20.5),ha='center',va='center',fontsize=8,rotation=90)
+
+# post-shot xrays & beamsplitter
+ax.plot([32,32,23],[12.7,18,18],linestyle='-',color='k',lw=.8,zorder=0)
+ax.plot([32,32],[18,22],linestyle='-',color='k',lw=.8,zorder=0)
+ax.plot([31,33],[17,19],linestyle='-',color='grey',zorder=0)
+
+#pimax cameras
+pimax1 = patches.Rectangle((28,22),width=8.,height=3,fill=False,lw=1.,color='k')
+pimax2 = patches.Rectangle((20.,14),width=3.,height=8,fill=False,lw=1.,color='k')
+ax.annotate("PIMAX" ,(32,23.5),ha='center',va='center',fontsize=8)
+ax.annotate("PIMAX" ,(21.5,18),ha='center',va='center',rotation=90,fontsize=8)
 
 
 #rod     = patches.Circle((31.,0.),radius=.5,color=mag(0.6))#'purple')
@@ -98,16 +162,31 @@ ax.add_patch(sabot)
 #ax.add_patch(sabota)
 #ax.add_patch(sabotb)
 #ax.add_patch(sabotc)
+ax.add_patch(sipernt)
+ax.add_patch(window)
 ax.add_patch(flyer)
 ax.add_patch(drivera)
 ax.add_patch(driverb)
 ax.add_patch(Alwalla)
 ax.add_patch(Alwallb)
-ax.add_patch(sipernt)
+ax.add_patch(Albrima)
+ax.add_patch(Albrimb)
 ax.add_patch(siperntZOOM)
-ax.add_patch(window)
+ax.add_patch(siperntZOOMbox)
+ax.add_patch(zmcirc)
+ax.add_patch(xrays1)
+ax.add_patch(xrays2)
+ax.add_patch(xrays3)
+ax.add_patch(pimax1)
+ax.add_patch(pimax2)
+ax.add_patch(simregn)
+ax.add_patch(xrayfov)
+ax.add_patch(rod)
+ax.add_patch(rod2)
+#ax.add_patch(scale_1)
+
 #ax.add_patch(rod)
-#ax.axis('off')
+ax.axis('off')
 """
 ax.plot([9,35],[5,5],linestyle=':',color='r')
 ax.plot([9,35],[-5,-5],linestyle=':',color='r')
@@ -119,7 +198,7 @@ xl = 0.5*np.sin(yl*3.)+8.5
 #ax.annotate("",xy=(10.,5),xytext=(10.,-5), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3",color='r'),rotation=90,color='r')
 plt.tight_layout()
 #fig.savefig('ESRF_setup_toscale_MAY16_ROT-90.pdf',format='pdf',dpi=500,bbox_inches='tight',transparent=True)
-#fig.savefig('ESRF_setup_toscale_MAY16_ROT-90.png',format='png',dpi=700,bbox_inches='tight',transparent=True)
+fig.savefig('paper2_bigfig.png',format='png',dpi=700,bbox_inches='tight',transparent=True)
 
 
 

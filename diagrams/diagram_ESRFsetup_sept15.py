@@ -90,8 +90,8 @@ ax.fill_betweenx(yl,xl,10.,linestyle='-',color='darkblue')
 ax.annotate("10.0 mm \n (Simulated Region)" ,(11.5,0.),va='center',ha='center',rotation=90,color='r')
 ax.annotate("",xy=(10.,5),xytext=(10.,-5), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3",color='r'),rotation=90,color='r')
 plt.tight_layout()
-fig.savefig('ESRF_setup_toscale.pdf',format='pdf',dpi=500,bbox_inches='tight',transparent=True)
-fig.savefig('ESRF_setup_toscale.png',format='png',dpi=700,bbox_inches='tight',transparent=True)
+fig.savefig('ESRF_setup_toscale_SPT15.pdf',format='pdf',dpi=500,bbox_inches='tight',transparent=True)
+#fig.savefig('ESRF_setup_toscale.png',format='png',dpi=700,bbox_inches='tight',transparent=True)
 
 
 
