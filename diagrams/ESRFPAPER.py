@@ -18,8 +18,8 @@ ax.set_ylim(-25,+25)
 mag = plt.cm.magma
 
 sabot   = patches.Rectangle((9.,-6.35),       width=15.,height=12.7,color='silver')#'darkblue')
-ax.annotate(r"$V_I\approx 600 \text{ms}^{-1}$",xy=(23,-15.),textcoords='data',ha='center',va='center',rotation=180,fontsize=7)
-impact = patches.Arrow(20,-15,10,0,color='k',width=5,fill=False)
+ax.annotate(r"$600 \text{ms}^{-1}$",xy=(22,0.),textcoords='data',ha='center',va='center',rotation=90,fontsize=7)
+impact = patches.Arrow(20,-10,5,0,color='k',width=4,fill=False)
 
 #sabota  = patches.Rectangle((7.5,-6.35),      width=1., height=12.7,color=mag(0.0))#'darkblue')
 #sabotb  = patches.Rectangle((6.25,-6.35),      width=.75,height=12.7,color=mag(0.0))#'darkblue')
@@ -52,7 +52,7 @@ rod     = patches.Rectangle((55.-1.25,-10.), width=2.5,height=20,color='blue')
 rod2    = patches.Circle((55.,16.), radius = 1.25,color='b')
 ax.plot([55.,55.],[9.,18.],linestyle=':',color='k',lw=.8)
 ax.plot([53.,57.],[16.,16.],linestyle=':',color='k',lw=.8)
-ax.annotate("rod",xy=(55,0.),textcoords='data',ha='center',va='center',rotation=90,color='w')
+ax.annotate("borosilicate rod",xy=(55,0.),textcoords='data',ha='center',va='center',rotation=90,color='w')
 
 # simulated region
 simregn = patches.Rectangle((18,-12.7),width=24,height=25.4,fill=False,color='k',ls='-.',zorder=3,label='iSALE')
@@ -70,10 +70,10 @@ zmcirc  = patches.Circle((72.,17.), radius=5.,fill=False,ls='--',lw=1.,color='k'
 grainsx = [69,74,72,70,75,69,71,74,73,71]
 grainsy = [15,20,16,16,19,17,14,14,15,20]
 ax.plot(grainsx,grainsy,marker='.',color='plum',linestyle=' ',mec='k')
-ax.annotate("Matrix" ,(69,6),ha='center',va='center',fontsize=8,rotation=90)
-ax.annotate(r"$\diameter\approx7~\mu$m" ,(72,6),ha='center',va='center',fontsize=8,rotation=90)
-ax.annotate(r"$\phi \approx 70\%$" ,(75,6),ha='center',va='center',fontsize=8,rotation=90)
-ax.annotate(r"iSALE: $\epsilon-\alpha$ model" ,(78,6),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate("Matrix (Silica)" ,(69,4),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate(r"$\diameter\approx7~\mu$m" ,(72,4),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate(r"$\phi \approx 70\%$" ,(75,4),ha='center',va='center',fontsize=8,rotation=90)
+ax.annotate(r"iSALE: $\epsilon-\alpha$ model" ,(78,4),ha='center',va='center',fontsize=8,rotation=90)
 
 # zoom lines
 ax.plot([35,50],[-5,-12.5],color='k',ls='--',zorder=10,lw=1)
@@ -90,7 +90,7 @@ ax.annotate("X-RAYS" ,(25,-20.5),ha='center',va='center',fontsize=8,rotation=90)
 # post-shot xrays & beamsplitter
 ax.plot([32,32,23],[12.7,18,18],linestyle='-',color='k',lw=.8,zorder=0)
 ax.plot([32,32],[18,22],linestyle='-',color='k',lw=.8,zorder=0)
-ax.plot([31,33],[17,19],linestyle='-',color='grey',zorder=0)
+ax.plot([31,33],[19,17],linestyle='-',color='grey',zorder=0)
 
 #pimax cameras
 pimax1 = patches.Rectangle((28,22),width=8.,height=3,fill=False,lw=1.,color='k')
@@ -183,6 +183,7 @@ ax.add_patch(simregn)
 ax.add_patch(xrayfov)
 ax.add_patch(rod)
 ax.add_patch(rod2)
+ax.add_patch(impact)
 #ax.add_patch(scale_1)
 
 #ax.add_patch(rod)
@@ -198,7 +199,8 @@ xl = 0.5*np.sin(yl*3.)+8.5
 #ax.annotate("",xy=(10.,5),xytext=(10.,-5), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3",color='r'),rotation=90,color='r')
 plt.tight_layout()
 #fig.savefig('ESRF_setup_toscale_MAY16_ROT-90.pdf',format='pdf',dpi=500,bbox_inches='tight',transparent=True)
-fig.savefig('paper2_bigfig.png',format='png',dpi=700,bbox_inches='tight',transparent=True)
+fig.savefig('figure1.pdf',format='pdf',dpi=500,bbox_inches='tight',transparent=True)
+fig.savefig('figure1.png',format='png',dpi=500,bbox_inches='tight',transparent=True)
 
 
 
