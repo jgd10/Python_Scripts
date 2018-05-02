@@ -75,25 +75,3 @@ for i in range(500):
     time.sleep(.01)
 
 
-"""
-# Method 4, very similar to 3 except the loading bar is created outside the loop
-# and it doesn't quite work as it's supposed to.
-c = 0
-bar = '#'
-# create loading bar
-prog_bar = ['\r[']+[' ']*(100)+[']']
-for i in range(1500):
-    # for each 500 iterations, refill the progress bar with a new symbol
-    if i == 500:  
-        c = 500
-        bar=':'
-    if i == 1000: 
-        c = 1000 
-        bar='>'
-    percent_comp = max(int(100.*float(i-c)/499.),1)
-    # change all elements from 1st to current, to the 'fill' symbol: bar
-    prog_bar[1:percent_comp-1]= bar*(percent_comp-2)
-    print ''.join(prog_bar),
-    sys.stdout.flush()
-    time.sleep(.01)
-"""
