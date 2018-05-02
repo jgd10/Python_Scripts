@@ -18,7 +18,7 @@ L_cells    = int(L_length/GRIDSPC)
 print 'mesh shape: {} x {}'.format(L_cells,T_cells)
 Radius = 500.e-6
 r      = int(Radius/GRIDSPC)
-pss.generate_mesh(L_cells,T_cells,CPPR=r,mat_no=4,GridSpc=GRIDSPC)
+pss.generate_mesh(L_cells,T_cells,CPPR=r,mat_no=7,GridSpc=GRIDSPC)
 pss.mesh_Shps[0,:,:] = pss.gen_circle(r)
 mats = pss.mats
 
@@ -37,7 +37,7 @@ pss.fill_rectangle(Cu1_L1,Cu1_T1,Cu1_L2,Cu1_T2,mats[0])
 
 # Cu top hat part 2: Central protrusion 9.8mm x 1.3mm
 Cu2_L1 = 0.e-3
-Cu2_L2 = 4.7e-3
+Cu2_L2 = 4.8e-3
 Cu2_T1 = 1.3e-3
 Cu2_T2 = 2.6e-3
 pss.fill_rectangle(Cu2_L1,Cu2_T1,Cu2_L2,Cu2_T2,mats[0])
@@ -63,32 +63,32 @@ dx3 = 0.2e-3
 dx2 = 0.3e-3
 dx1 = 4.3e-3
 Sip1_L1 = 0.e-3
-Sip1_L2 = 4.9e-3
+Sip1_L2 = dx
 Sip1_T1 = 2.6e-3
 Sip1_T2 = 8.6e-3+additional_length
-#Sip2_L1 = dx1
-#Sip2_L2 = dx1+dx2
-#Sip2_T1 = 2.6e-3
-#Sip2_T2 = 8.6e-3+additional_length
-#Sip3_L1 = dx1+dx2
-#Sip3_L2 = dx1+dx2+dx3
-#Sip3_T1 = 2.6e-3
-#Sip3_T2 = 8.6e-3+additional_length
-#Sip4_L1 = dx1+dx2+dx3
-#Sip4_L2 = dx1+dx2+dx3+dx4
-#Sip4_T1 = 2.6e-3
-#Sip4_T2 = 8.6e-3+additional_length
+Sip2_L1 = dx
+Sip2_L2 = dx+dx
+Sip2_T1 = 2.6e-3
+Sip2_T2 = 8.6e-3+additional_length
+Sip3_L1 = dx+dx
+Sip3_L2 = dx+dx+dx
+Sip3_T1 = 2.6e-3
+Sip3_T2 = 8.6e-3+additional_length
+Sip4_L1 = dx+dx+dx
+Sip4_L2 = dx+dx+dx+dx
+Sip4_T1 = 2.6e-3
+Sip4_T2 = 8.6e-3+additional_length
 pss.fill_rectangle(Sip1_L1,Sip1_T1,Sip1_L2,Sip1_T2,mats[2])
-#pss.fill_rectangle(Sip2_L1,Sip2_T1,Sip2_L2,Sip2_T2,mats[3])
-#pss.fill_rectangle(Sip3_L1,Sip3_T1,Sip3_L2,Sip4_T2,mats[4])
-#pss.fill_rectangle(Sip4_L1,Sip4_T1,Sip4_L2,Sip3_T2,mats[5])
+pss.fill_rectangle(Sip2_L1,Sip2_T1,Sip2_L2,Sip2_T2,mats[3])
+pss.fill_rectangle(Sip3_L1,Sip3_T1,Sip3_L2,Sip4_T2,mats[4])
+pss.fill_rectangle(Sip4_L1,Sip4_T1,Sip4_L2,Sip3_T2,mats[5])
 
 # PMMA window:  9.8mm x 6.0mm
 PMMA_L1 = 0.e-3
 PMMA_L2 = 4.9e-3
 PMMA_T1 = 8.6e-3+additional_length
 PMMA_T2 = 14.6e-3+additional_length
-pss.fill_rectangle(PMMA_L1,PMMA_T1,PMMA_L2,PMMA_T2,mats[3])
+pss.fill_rectangle(PMMA_L1,PMMA_T1,PMMA_L2,PMMA_T2,mats[6])
 
 print pss.meshx,pss.meshy
 fig = plt.figure()
@@ -112,4 +112,4 @@ for item in mats:
 #plt.imshow(pss.materials[4,:,:],interpolation='nearest',cmap='Reds_r')
 plt.show()
 
-pss.save_general_mesh(fname='Sip4_9.4mm.iSALE',noVel=True)
+pss.save_general_mesh(fname='Sip4_9.6mm_porgrad.iSALE',noVel=True)

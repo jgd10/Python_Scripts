@@ -170,7 +170,6 @@ GRIDSPC    = 11.85e-6 * 3.
 T_cells    = int(T_length/GRIDSPC)				# T - Transverse, L - Longitudinal
 L_cells    = int(L_length/GRIDSPC)				# T - Transverse, L - Longitudinal
 r          = int(r_real/GRIDSPC)
-print T_cells, L_cells, r
 pss.generate_mesh(L_cells,T_cells,mat_no=4+3,GridSpc=GRIDSPC)
 mats = pss.mats
 #pss.mesh_Shps[0,:,:] = pss.gen_circle(r)

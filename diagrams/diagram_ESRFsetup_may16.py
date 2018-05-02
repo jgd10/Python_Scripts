@@ -22,9 +22,29 @@ Alwalla = patches.Rectangle((28.,-6.),width=11.,height=1.  ,color=mag(0.7))#'.5'
 Alwallb = patches.Rectangle((28.,+5.),width=11.,height=1.  ,color=mag(0.7))#'.5')
 sipernt = patches.Rectangle((29.,-5.),width=6. ,height=10  ,color=mag(0.3))#'lightsteelblue')
 rod     = patches.Circle((31.,0.),radius=.5,color=mag(0.6))#'purple')
+
+xray1   = patches.Circle((31.,11.5), radius=.5,color='k',fill=False)
+xray2   = patches.Circle((31.,-11.5),radius=.5,color='k',fill=False)
+xray3   = patches.Circle((24.,11.5), radius=.5,color='k',fill=False)
+xray4   = patches.Circle((24.,-11.5),radius=.5,color='k',fill=False)
+xray5   = patches.Circle((17.,11.5), radius=.5,color='k',fill=False)
+xray6   = patches.Circle((17.,-11.5),radius=.5,color='k',fill=False)
+xray7   = patches.Circle((38.,11.5), radius=.5,color='k',fill=False)
+xray8   = patches.Circle((38.,-11.5),radius=.5,color='k',fill=False)
+xray9   = patches.Circle((10.,11.5), radius=.5,color='k',fill=False)
+xray0   = patches.Circle((10.,-11.5),radius=.5,color='k',fill=False)
+
+xrayx = [10,17,24,31,38]
+xrayy = [-11.5,11.5]
+ax.annotate("X-rays" ,(13.5,-10.),ha='center',va='center',rotation= 90,fontsize=16)
+
+for xcor in xrayx:
+    for ycor in xrayy:
+        ax.plot([xcor],[ycor],marker='x',mew=2.,color='k',linestyle=' ')
+
 window  = patches.Rectangle((35.,-5.),width=6. ,height=10  ,color=mag(0.5))#'tan')
 
-ax.text(10,12,"[TO SCALE]",rotation = 90)
+#ax.text(10,12,"[TO SCALE]",rotation = 90)
 
 ax.annotate("",xy=(10., 7.),xytext=(24., 7.), textcoords='data',arrowprops=dict(arrowstyle="<-",connectionstyle="arc3"))
 ax.annotate("25 mm" ,(12.5,10.),ha='center',rotation= 90)
@@ -34,7 +54,7 @@ ax.annotate("",xy=(23,6.35),xytext=(23.,-6.35), textcoords='data',arrowprops=dic
 ax.text(13.,0.,r"$V_{impact}\approx 600ms^{-1}$",bbox=dict(boxstyle='rarrow',fc='w'),color='k')
 
 ax.annotate("",xy=(24., -6.),xytext=(26., -6.), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3"))
-ax.annotate("2 mm",xytext=(23.,-9.),xy=(25.,-6.5),arrowprops=dict(arrowstyle="->",connectionstyle="arc3,rad=+0.2"),fontsize=12,rotation=90)
+ax.annotate("2 mm",xytext=(23.,-8.7),xy=(25.,-6.5),arrowprops=dict(arrowstyle="->",connectionstyle="arc3,rad=+0.2"),fontsize=12,rotation=90)
 ax.annotate("Flyer: Cu/Polycarb",xy=(25,0.),rotation=90,ha = 'center',va='center',fontsize=10)
 
 ax.annotate("",xy=(27., 12.7),xytext=(25.5, 12.7), textcoords='data',arrowprops=dict(arrowstyle="->",connectionstyle="arc3"))
@@ -67,7 +87,7 @@ plt.plot([39,41],[-6,-6],linestyle='--',color='k')
 ax.annotate("1 mm",xy=(41.5,5.5),textcoords='data',va='center',rotation=90)
 ax.annotate("1 mm",xy=(41.5,-5.5),textcoords='data',va='center',rotation=90)
 ax.annotate("Cell: Al",(35,5.5),ha='center',va='center',color='w',fontsize=10)
-ax.annotate("Cell: Al",(35,-5.5),ha='center',va='center',color='w',fontsize=10)
+ax.annotate("Cell: Al",(35,-5.5),ha='center',va='center',color='w',fontsize=10,rotation=180)
 ax.annotate("",xy=(28., 7.),xytext=(39., 7.), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3"))
 ax.annotate("11 mm" ,(34,8.5),ha='center',va='center',rotation=90)
 
@@ -90,6 +110,16 @@ ax.add_patch(Alwallb)
 ax.add_patch(sipernt)
 ax.add_patch(window)
 ax.add_patch(rod)
+ax.add_patch(xray1)
+ax.add_patch(xray2)
+ax.add_patch(xray3)
+ax.add_patch(xray4)
+ax.add_patch(xray5)
+ax.add_patch(xray6)
+ax.add_patch(xray7)
+ax.add_patch(xray8)
+ax.add_patch(xray9)
+ax.add_patch(xray0)
 ax.axis('off')
 """
 ax.plot([9,35],[5,5],linestyle=':',color='r')

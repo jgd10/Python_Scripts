@@ -5,23 +5,6 @@ import matplotlib.pyplot as plt
 import sys
 import glob
 
-def flip_grain(mesh0):
-    flip_options = [0,1,2,3]
-    F            = random.choice(flip_options)
-    if F == 0 or F == 2:
-        pass
-    elif F == 1:
-        mesh0 = mesh0[::-1,:]
-    elif F == 3:
-        mesh0 = mesh0[:,::-1]
-    return mesh0
-
-def polygon_area(X,Y):
-    N = np.size(X)
-    A = 0
-    for i in range(1,N):
-        A += (X[i-1]*Y[i]-X[i]*Y[i-1])*.5
-    return abs(A)
 
 def function(x):
     A = 2.908
@@ -52,18 +35,75 @@ def PHI_(x):
 def DD_(x):
     return 0.5*2.**(-x)
 
+def setupTOPhalf(V_I,vf_pld, void_pld,mat_por,Plot=True):
+   # fill whole mesh with matrix
+   pss.fill_rectangle(0,0,pss.meshx*pss.GS,pss.meshy*pss.GS,pss.mats[0])
+   # fill top 6 cells with matrix
+   pss.overwrite_rectangle(0.,(pss.meshy-6.)*pss.GS,pss.meshx*pss.GS,pss.meshy*pss.GS,pss.mats[0])
+   # fill top 3 cells of mesh with void
+   pss.fill_rectangle(0.,(pss.meshy-3.)*pss.GS,pss.meshx*pss.GS,pss.meshy*pss.GS,-1.)
+   
+   prev_voids = np.copy(pss.materials[-1])
+   pss.materials[-1] *= 0.
+   print 'volume fraction of explicit void: {:3.3f} %, matrix porosity - {:3.3f}%'.format(void_pld*100.,mat_por*100.)
+   #pss.rectangle_vel(0,y_length*.5,x_length,y_length,-5.e2,dim=1)
+   pss.rectangle_vel(0,0,x_length,y_length,-V_I,dim=1)
+   pss.save_general_mesh(fname = 'meso_m_vf-{:3.2f}_vof-{:3.2f}_mpor={:3.2f}_partB.iSALE'.format(vf_pld*100,void_pld*100,mat_por),info=True)
+   if Plot:
+       fig2 = plt.figure(1)                                                        # plot the resulting mesh. Skip this bit if you do not need to.
+       ax2  = fig2.add_subplot(111)
+       for KK in range(pss.Ms):
+           matter = np.copy(pss.materials[KK,:,:])*(KK+1)
+           matter = np.ma.masked_where(matter==0.,matter)
+           #ax2.imshow(matter, cmap='viridis',vmin=0,vmax=pss.Ms,interpolation='nearest',origin='lower')
+       #fig2.savefig('vfrac-{:3.2f}_void-{:3.2f}_mpor-{:3.2f}-PartB.png'.format(vf_pld*100,void_pld*100,mat_por))
+       fig2.clf()
+   # Reverse changes for next loop to how they were before
+   pss.materials[0] *= 0.
+   pss.materials[-1] = prev_voids
+   return
+
+def setupBOTTOMhalf(V_I,vf_pld,void_pld,mat_por,Plot=True):
+   # fill whole mesh with matrix
+   pss.fill_rectangle(0,0,pss.meshx*pss.GS,pss.meshy*pss.GS,pss.mats[0])
+   # fill bottom 6 cells with matrix
+   pss.overwrite_rectangle(0.,0.,pss.meshx*pss.GS,6.*pss.GS,pss.mats[0])
+   # fill bottom 3 cells of mesh with void
+   pss.fill_rectangle(0.,0.,pss.meshx*pss.GS,3.*pss.GS,-1.)
+   
+   prev_voids = np.copy(pss.materials[-1])
+   pss.materials[-1] *= 0.
+   print 'volume fraction of explicit void: {:3.3f} %, matrix porosity - {:3.3f}%'.format(void_pld*100.,mat_por*100.)
+   #pss.rectangle_vel(0,y_length*.5,x_length,y_length,-5.e2,dim=1)
+   pss.rectangle_vel(0,0,x_length,y_length,V_I,dim=1)
+   pss.save_general_mesh(fname = 'meso_m_vf-{:3.2f}_vof-{:3.2f}_mpor={:3.2f}_partA.iSALE'.format(vf_pld*100,void_pld*100,mat_por),info=True)
+   if Plot:
+       fig2 = plt.figure(1)                                                        # plot the resulting mesh. Skip this bit if you do not need to.
+       ax2  = fig2.add_subplot(111)
+       for KK in range(pss.Ms):
+           matter = np.copy(pss.materials[KK,:,:])*(KK+1)
+           matter = np.ma.masked_where(matter==0.,matter)
+           ax2.imshow(matter, cmap='viridis',vmin=0,vmax=pss.Ms,interpolation='nearest',origin='lower')
+       fig2.savefig('vfrac-{:3.2f}_void-{:3.2f}_mpor-{:3.2f}-PartA.png'.format(vf_pld*100,void_pld*100,mat_por))
+       fig2.clf()
+   # Reverse changes for next loop to how they were before
+   pss.materials[0] *= 0.
+   pss.materials[-1] = prev_voids
+   return
+
+
 vol_frac   = .5
-Y_cells    = 1000
+Y_cells    = 1200
 X_cells    = 500
-y_length   = 2.5e-3                                                 # Transverse width of bed
+y_length   = 3.e-3                                                 # Transverse width of bed
 x_length   = 1.25e-3                                                 # Longitudinal width of bed
 cppr       = 25                                                     # Cells per particle radius
 LB_cppr    = 5.                                                     # Lowest allowed cppr
 GRIDSPC    = x_length/X_cells                                       # Physical distance/cell
-mat_no     = 5
+mat_no     = 6
 
 #############################
-largest_cppr  = 50 
+largest_cppr  = 100 
 smallst_cppr  = 4
 largest_grain = largest_cppr*GRIDSPC
 smallst_grain = smallst_cppr*GRIDSPC
@@ -94,7 +134,8 @@ phi_tol   = abs(part_phi[1:] - part_phi[:-1])/2.                       # The 'to
 part_freq = np.zeros((n)).astype(int)                               # An array to store the frequency of each grain size
 wasted_area = 0
 
-grains = glob.glob('../grain_library/regshapes/grain_area*.txt')
+#grains = glob.glob('../../../grain_library/regshapes/grain_area*.txt')
+grains = glob.glob('../../../grain_library/regshapes/v2*.txt')
 MAXR   = np.amax(guide_radi)
 ii = 0
 II = 0
@@ -104,14 +145,18 @@ rotation = np.zeros((n))
 elongtin = np.zeros((n))
 areratio = np.zeros((n))
 roundnes = np.zeros((n))
-while ii < n:
+
+while ii < n-1:
     GRN                  = random.choice(grains)
     rot                  = random.random()
     rotation[ii]         = rot
     ascale               = (guide_radi[ii]/MAXR)**2.
     
-    pss.mesh_Shps[ii],fail = pss.gen_shape_fromvertices(fname=GRN,mixed=False,areascale=ascale, rot=rot, min_res=4)
-    elongtin[ii],areratio[ii],roundnes[ii] = pss.shape_info(GRN)
+    #pss.mesh_Shps[ii],fail = pss.gen_shape_fromvertices(fname=GRN,mixed=False,areascale=ascale, rot=rot, min_res=4)
+    pss.mesh_Shps[ii] = pss.gen_circle(guide_radi[ii]/GRIDSPC)
+    elongtin[ii],areratio[ii],roundnes[ii] = 1.,4./np.pi,1. #pss.shape_info(GRN)
+    fail = False
+    #print pss.shape_info(GRN)
     """
     plt.figure()
     plt.axis('equal')
@@ -119,10 +164,10 @@ while ii < n:
     plt.show()
     """
     if fail != True:
-        equiv_diam           = np.sqrt(np.sum(pss.mesh_Shps[ii])/np.pi)*2.
-        part_radi[ii]        = equiv_diam/2.
+        equiv_diam           = guide_radi[ii]*2. #np.sqrt(np.sum(pss.mesh_Shps[ii])/np.pi)*2.
+        part_radi[ii]        = guide_radi[ii]
         part_area[ii]        = np.sum(pss.mesh_Shps[ii])
-        phi                  = -np.log2(equiv_diam*GRIDSPC*1.e3)   # For each radius, generate an equivalent phi. phi = -log2(2R)
+        phi                  = part_phi[ii]#-np.log2(equiv_diam*GRIDSPC*1.e3)   # For each radius, generate an equivalent phi. phi = -log2(2R)
         if ii == n-1: 
             UB_tol = 0
         else:
@@ -134,6 +179,7 @@ while ii < n:
 
         theta                = lunar_pdf(phi,LB_tol,UB_tol)              # as a percentage by Weight! *A_est/part_area[ii]
         area_fraction        = (vol_frac*A_total)/(part_area[ii]*(GRIDSPC**2.))
+        print theta,area_fraction
         frq                  = theta*area_fraction
         part_freq[ii]        = int(np.around(frq))                      # The frequency of that size is the integral of the pdf over the tolerance range
         lost_area           += (frq-part_freq[ii])*part_area[ii]
@@ -215,36 +261,34 @@ xcSI = np.array(xc).astype(float)
 ycSI = np.array(yc).astype(float)
 xcSI*= GRIDSPC                                                      # Turn the coordinates into physical units
 ycSI*= GRIDSPC
-MAT  = pss.mat_assignment(pss.mats[1:],xcSI,ycSI)                   # Assign materials to the particles. This returns an array that is the same shape as xc, 
+MAT  = pss.mat_assignment(pss.mats[1:-1],xcSI,ycSI)                   # Assign materials to the particles. This returns an array that is the same shape as xc, 
 pss.populate_materials(I_,xc,yc,MAT,J,info=True)                    # Now populate the materials meshes (NB these are different to the 'mesh' and are
                                                                     # and contains the optimum corresponding material number for each particle
                                                                     # the ones used in the actual iSALE input file)
-
-
-
-
-
-
-
 data = np.vstack((J_,equiv_radi,equiv_cppr,MAT,Elong,A_rat,Round,xcSI,ycSI,Angle,I_))
 index = ('particle number, Equivalent Radii, Equivalent Cppr, Material Number, Elongation, Area Ratio, Roundness, x coord, y coord, Rotation, Shape Number')
 data = np.transpose(data)
 
 dframe = np.core.records.array(data,names=index)
-np.savetxt('info_m_Regolith_vfrac-{:3.2f}.csv'.format(vf_pld*100),dframe,header=index,comments='',delimiter=',')
+np.savetxt('info_m_Regolith_vfrac-{:3.2f}_partA.csv'.format(vf_pld*100),dframe,header=index,comments='',delimiter=',')
 
-pss.fill_rectangle(0,0,pss.meshx*GRIDSPC,pss.meshy*GRIDSPC,pss.mats[0])
-pss.overwrite_rectangle(0.,(pss.meshy-6.)*GRIDSPC,pss.meshx*GRIDSPC,pss.meshy*GRIDSPC,pss.mats[0])
-pss.overwrite_rectangle(0.,0.,pss.meshx*GRIDSPC,6.*GRIDSPC,pss.mats[0])
-pss.fill_rectangle(0.,(pss.meshy-3.)*GRIDSPC,pss.meshx*GRIDSPC,pss.meshy*GRIDSPC,-1.)
-pss.fill_rectangle(0.,0.,pss.meshx*GRIDSPC,3.*GRIDSPC,-1.)
-pss.rectangle_vel(0,y_length*.5,x_length,y_length,-2.5e2,dim=1)
-pss.rectangle_vel(0,0,x_length,y_length*.5,2.5e2,dim=1)
-#pss.convert_to_impactor(R1,R2,4)
-                                                                    # pySALESetup prioritises material placed sooner. So later things will NOT overwrite previous ones
-pss.save_general_mesh(fname = 'meso_m_Regolith_vfrac-{:3.2f}_mirrorimpact.iSALE'.format(vf_pld*100),info=True)                                             # Save the mesh as meso_m.iSALE (default)
-
-
+# pySALESetup prioritises material placed sooner. So later things will NOT overwrite previous ones
+"""
+# this code saves several different files with different amounts of void each time
+for i in range(J):
+    void_pld   = np.sum(pss.materials[-1])/float(np.size(pss.materials[-1]))
+    if (i==int(J*.25)) or (i==int(J*.5)) or (i==int(J*.75)):
+        mat_por = ((.5-void_pld)/(1.-vf_pld-void_pld))
+        #setupBOTTOMhalf(1.5e3,vf_pld,void_pld,mat_por)
+        setupTOPhalf(1.5e3,vf_pld,void_pld,mat_por)
+    II = max(I_[i]-1,0)
+    II = min(II,np.amax(I_))
+    pss.place_shape(pss.mesh_Shps[II],xc[i],yc[i],pss.mats[-1])
+"""
+void_pld = np.sum(pss.materials[-1])/float(np.size(pss.materials[-1]))
+mat_por  = ((.5-void_pld)/(1.-vf_pld-void_pld))
+#setupBOTTOMhalf(1.5e3,vf_pld,void_pld,mat_por)
+setupTOPhalf(1.5e3,vf_pld,void_pld,mat_por)
 
 
 
@@ -273,7 +317,7 @@ ax.set_xlabel('$\phi = -$log$_2$(Diameter [mm])')
 ax.set_ylabel('AREA%')
 ax.set_title('Bed : {} x {}, GRIDSPC = {:3.2g}m'.format(X_cells,Y_cells,GRIDSPC))
 ax.text(6,10,
-    'Area achieved = {:3.2f}% \nLost Area = {:3.2f}% \nPorosity of matrix = {:3.2f}%'.format(vf_pld*100.,lost_area,(.5/(1.-vf_pld)*100.)),fontsize=7)
+    'Area achieved = {:3.2f}% \nLost Area = {:3.2f}% \nPorosity of matrix = {:3.2f}%'.format(vf_pld*100.,lost_area,((.5-void_pld)/(1.-vf_pld-void_pld)*100.)),fontsize=7)
 
 ax.axvspan(np.amin(phi_),np.amax(phi_[:-1]),color='r',alpha=0.2,label='target region')
 ax.axvspan(np.amin(phi_[act_CDF>0]),np.amax(phi_[:-1]),color='b',alpha=0.2,label='actual region')
@@ -300,8 +344,6 @@ ax2.axhline(pss.meshy)
 
 #plt.xlim(0,pss.meshx)
 #plt.ylim(0,pss.meshy)
-ax2.axis('off')
-fig2.savefig('Regolith_vfrac-{:3.2f}_BED.png'.format(vf_pld*100),dpi=500,bbox_inches='tight')
 fig3 = plt.figure()
 ax3 = fig3.add_subplot(111)
 ax3.imshow(pss.VY_,cmap='plasma',origin = 'lower')

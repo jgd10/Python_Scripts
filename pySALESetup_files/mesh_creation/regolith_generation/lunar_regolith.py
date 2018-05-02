@@ -134,7 +134,8 @@ phi_tol   = abs(part_phi[1:] - part_phi[:-1])/2.                       # The 'to
 part_freq = np.zeros((n)).astype(int)                               # An array to store the frequency of each grain size
 wasted_area = 0
 
-grains = glob.glob('../grain_library/regshapes/grain_area*.txt')
+grains = glob.glob('../../../grain_library/regshapes/grain_area*.txt')
+#grains = glob.glob('../../../grain_library/regshapes/v2*.txt')
 MAXR   = np.amax(guide_radi)
 ii = 0
 II = 0
@@ -151,6 +152,7 @@ while ii < n:
     ascale               = (guide_radi[ii]/MAXR)**2.
     
     pss.mesh_Shps[ii],fail = pss.gen_shape_fromvertices(fname=GRN,mixed=False,areascale=ascale, rot=rot, min_res=4)
+    #pss.mesh_Shps[ii] = pss.gen_circle(guide_radi[ii])
     elongtin[ii],areratio[ii],roundnes[ii] = pss.shape_info(GRN)
     """
     plt.figure()
@@ -163,6 +165,7 @@ while ii < n:
         part_radi[ii]        = equiv_diam/2.
         part_area[ii]        = np.sum(pss.mesh_Shps[ii])
         phi                  = -np.log2(equiv_diam*GRIDSPC*1.e3)   # For each radius, generate an equivalent phi. phi = -log2(2R)
+        print equiv_diam,guide_radi[ii]*2./GRIDSPC
         if ii == n-1: 
             UB_tol = 0
         else:
@@ -173,6 +176,7 @@ while ii < n:
             LB_tol = phi_tol[ii]
 
         theta                = lunar_pdf(phi,LB_tol,UB_tol)              # as a percentage by Weight! *A_est/part_area[ii]
+        print phi,LB_tol,UB_tol
         area_fraction        = (vol_frac*A_total)/(part_area[ii]*(GRIDSPC**2.))
         frq                  = theta*area_fraction
         part_freq[ii]        = int(np.around(frq))                      # The frequency of that size is the integral of the pdf over the tolerance range

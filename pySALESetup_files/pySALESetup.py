@@ -497,7 +497,7 @@ def gen_shape_fromvertices(fname='shape.txt',mixed=False,areascale=1.,rot=0.,min
     radii     = np.sqrt(I**2+J**2)
     min_radii = np.amin(radii)
     max_radii = int(np.amax(radii))
-    min_size  = min(max_radii+1,Ns/2.)               
+    min_size  = int(min(max_radii+1,Ns/2.))
     min_size *= 2
     # Possible to have a max radius larger than half the box width
     # But not to have a sub-mesh that big!
@@ -946,7 +946,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,info=False
     nothing is returned.
     """
     global mesh, meshx, meshy, cppr_max, materials,Ns,part_no,GS
-    if MATS == None: MATS = materials                                                                 # Now the materials mesh is only the default. Another mesh can be used!
+    if MATS is None: MATS = materials                                                                 # Now the materials mesh is only the default. Another mesh can be used!
     if LX   == None: LX   = meshx                                                                     # The code should still work as before.
     if LY   == None: LY   = meshy
     if type(x0) == float or type(x0) == np.float64: x0 = int(x0/GS)
@@ -993,7 +993,7 @@ def place_shape(shape,x0,y0,mat,MATS=None,LX=None,LY=None,Mixed=False,info=False
         for o in range(J_final-J_initial):
             for p in range(I_final-I_initial):
                 if temp_shape[o,p] == 1.: 
-                    if MATS == None:
+                    if MATS is None:
                         if np.sum(materials[:,o+j_edge,p+i_edge]) == 0.:
                             materials[mat-1,o+j_edge,p+i_edge] = 1.
                             if info: part_no[o+j_edge,p+i_edge] = shape_no
