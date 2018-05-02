@@ -21,13 +21,13 @@ part_bed = patches.Rectangle((0.,30.),   width=10.,height=10. ,color='gray')
 
 circle1  = plt.Circle((18.,41.),4.,color='k',alpha=.5)     ##  # give each one a color based on their material number. 
 ax.annotate("",xy=(18., 41.),xytext=(22., 41.), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3",color='w'))
-ax.annotate("6 cppr" ,(19.7,40.5),ha='center',color='w',weight='bold',size=12)
+ax.annotate("8 cppr" ,(19.7,40.5),ha='center',color='w',weight='bold',size=12)
 ax.annotate("(cells per particle radius)" ,(18,47.),ha='center',color='k',weight='bold',size=12)
 
 ax.annotate("Al" ,(5.,15.),ha='center',color='w',weight='bold',size=16)
 ax.annotate("particles\n(WC)" ,(5.,35.),ha='center',color='w',weight='bold',size=16)
 ax.annotate(r"1 cell = 2 $\boldsymbol{\mu}$m" ,(5.,28.),ha='center',color='w',weight='bold',size=14)
-ax.annotate(r"$\boldsymbol{\phi}$ = 45\%" ,(5,38.),ha='center',color='w',weight='bold',size=16)
+ax.annotate(r"$\boldsymbol{\phi}$ = 0.5" ,(5,38.),ha='center',color='w',weight='bold',size=16)
 ax.text(5.,20.,r"$V_{impact}$",bbox=dict(boxstyle='rarrow',fc='w'),color='k',rotation=-90,ha='center',size=18)
 
 ax.annotate("",xy=(12., 20.),xytext=(12., 30.), textcoords='data',arrowprops=dict(arrowstyle="<->",connectionstyle="arc3"))
@@ -52,7 +52,7 @@ ax.add_patch(circle1)
 ax.add_patch(part_bed)
 ax.axis('off')
 plt.tight_layout()
-plt.savefig('BNHMK_setup_toscale.pdf',format='pdf',dpi=200,bbox_inches='tight')
+plt.savefig('BNHMK_setup_toscale.eps',format='eps',dpi=500,bbox_inches='tight')
 #plt.savefig('ESRF_setup_toscale.png',format='png',dpi=500,bbox_inxhes='tight')
 
 plt.show()
